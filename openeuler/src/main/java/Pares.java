@@ -193,6 +193,7 @@ public class Pares {
     }
 
     public static List<Map<String, Object>> customizeData() {
+        System.out.println("begin update customizeData");
         List<Map<String, Object>> r = new ArrayList<>();
         if (!setForum(r)) {
             System.out.println("Failed to add forum data");
@@ -202,7 +203,7 @@ public class Pares {
             System.out.println("Failed to add service data");
             return null;
         }
-        return null;
+        return r;
     }
 
     private static boolean setForum(List<Map<String, Object>> r) {
