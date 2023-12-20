@@ -19,6 +19,7 @@ public class App {
             PublicClient.makeIndex(INDEX_PREFIX + "_zh", MAPPING_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_en", MAPPING_PATH);
             fileDate();
+            handleGitee();
         } catch (Exception e) {
             System.out.println(e.getMessage());
             e.printStackTrace();
@@ -28,6 +29,21 @@ public class App {
         System.exit(0);
     }
 
+    public static void handleGitee() {
+        List<Map<String, Object>> customizeEscape = Pares.getGiteeData();
+        Set<String> idSet = new HashSet<>();
+        customizeEscape.stream().forEach(lm -> {
+            try {
+                PublicClient.insert(lm, INDEX_PREFIX + "_" + lm.get("lang"));
+                idSet.add((String) lm.get("path"));
+            } catch (Exception e) {
+
+            }
+        });
+        PublicClient.deleteExpired(idSet, INDEX_PREFIX + "_*");
+        System.out.println("start delete expired document");
+
+    }
     public static void fileDate() throws Exception {
         File indexFile = new File(TARGET);
         if (!indexFile.exists()) {
