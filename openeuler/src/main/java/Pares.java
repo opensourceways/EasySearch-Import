@@ -34,7 +34,8 @@ public class Pares {
     public static final String EVENTS = "events";
     public static final String USERPRACTICE = "userPractice";
     private static final String GITEE_REPOS_URL = System.getenv("GITEE_REPOS_URL");
-    private static final String GITEE_PROJS= System.getenv("GITEE_PROJS");
+    private static final String GITEE_README_URL = System.getenv("GITEE_README_URL");
+    private static final String GITEE_PROJS = System.getenv("GITEE_PROJS");
     private static final String FORUM_DOMAIN = System.getenv("FORUM_DOMAIN");
     private static final String SERVICE_URL = System.getenv("SERVICE_URL");
 
@@ -334,44 +335,55 @@ public class Pares {
         return true;
     }
 
-    public static List<Map<String, Object>> getGiteeData(){
+    public static List<Map<String, Object>> getGiteeData() {
         List<Map<String, Object>> mappingArray = new ArrayList<>();
-        if(GITEE_PROJS!=null && !GITEE_PROJS.isEmpty()){
+        if (GITEE_PROJS != null && !GITEE_PROJS.isEmpty()) {
             List<String> projectsList = Arrays.asList(new String(GITEE_PROJS).split(","));
-            projectsList.stream().forEach(p->{
-                String url = String.valueOf(GITEE_REPOS_URL).replace("{org}", p);
-                handGiteeData(url,mappingArray);
+            projectsList.stream().forEach(p -> {
+                String orgsUrl = String.valueOf(GITEE_REPOS_URL).replace("{org}", p);
+                String readmeUrl = String.valueOf(GITEE_README_URL).replace("{org}", p);
+                handGiteeData(orgsUrl, mappingArray,readmeUrl);
+
             });
         }
         return mappingArray;
     }
 
-    public static  void  handGiteeData( String url,List<Map<String, Object>> handleList) {
-        HttpURLConnection connection=null;
+    public static void handGiteeData(String orgsUrl, List<Map<String, Object>> handleList,String readmeUrl) {
+        HttpURLConnection connection = null;
         try {
             JSONArray resultArray = new JSONArray();
             Integer page = 0;
             do {
                 page++;
-                StringBuilder urlBuilder = new StringBuilder(url).append(URLEncoder.encode(String.valueOf(page), "utf-8"));
-                connection = sendHTTP(urlBuilder.toString(), "GET");
-                if (connection == null || connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                    System.out.println("获取组织仓库数据失败：" + connection);
-                    return ;
-                }
-                String result = ReadInput(connection.getInputStream());
-                if (result != null) {
-                    resultArray = JSONArray.parseArray(result);
+                StringBuilder urlBuilder = new StringBuilder(orgsUrl).append(URLEncoder.encode(String.valueOf(page), "utf-8"));
+                String httpResponse = getHttpResponse(urlBuilder.toString());
+                if (httpResponse != null) {
+                    resultArray = JSONArray.parseArray(httpResponse);
                     if (resultArray != null && resultArray.size() > 0) {
                         resultArray.stream().forEach(a -> {
-                            JSONObject each = (JSONObject) a;
-                            Map<String, Object> date = new HashMap<>();
-                            date.put("title", each.getString("full_name"));
-                            date.put("textContent", each.getString("description"));
-                            date.put("path", each.getString("html_url"));
-                            date.put("type", "gitee");
-                            date.put("lang", "zh");
-                            handleList.add(date);
+                            try{
+                                JSONObject each = (JSONObject) a;
+                                Map<String, Object> date = new HashMap<>();
+                                String fullName = each.getString("full_name");
+                                date.put("title",fullName);
+                                date.put("path", each.getString("html_url"));
+                                date.put("type", "gitee");
+                                date.put("lang", "zh");
+                                date.put("textContent","");
+                                handleList.add(date);
+                                String description = each.getString("description");
+                                if(description !=null && !description.isEmpty() && !"null".equals(description)){
+                                    date.put("title",String.valueOf( new StringBuilder(fullName).append(" (").append(description).append(")")));
+                                }
+                                String readmeResponse = getHttpResponse(String.valueOf(readmeUrl).replace("{repo}",each.getString("path")));
+                                if(readmeResponse!=null){
+                                    JSONObject readmeJson = JSONObject.parseObject(readmeResponse);
+                                    date.put("textContent",decodeBase64(readmeJson.getString("content")));
+                                }
+                            }catch (Exception e){
+                                System.out.println("gitee数据处理错误："+e);
+                            }
                         });
                     }
                 }
@@ -380,11 +392,33 @@ public class Pares {
         } catch (Exception e) {
             e.printStackTrace();
         }
-         finally {
+    }
+
+    public static String getHttpResponse(String url ){
+        String response=null;
+        HttpURLConnection connection=null;
+        try {
+             connection  = sendHTTP(url, "GET");
+            if (connection == null || connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                System.out.println("http请求失败：" + connection);
+                return response;
+            }
+            response = ReadInput(connection.getInputStream());
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("http请求失败：" + e.toString());
+        }finally {
             if (null != connection) {
                 connection.disconnect();
             }
         }
+        return response;
+    }
+    public static String decodeBase64(String base64Str) {
+        String decodeStr="";
+        byte[] base64Data = Base64.getDecoder().decode(base64Str);
+        decodeStr=new String(base64Data, StandardCharsets.UTF_8);
+        return decodeStr;
     }
 
     private static HttpURLConnection sendHTTP(String path, String method) throws IOException {
