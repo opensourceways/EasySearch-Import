@@ -401,7 +401,7 @@ public class Pares {
         HttpURLConnection connection=null;
         try {
              connection  = sendHTTP(url, "GET");
-            if (connection == null || connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+            if (connection == null || (connection.getResponseCode() != HttpURLConnection.HTTP_OK && connection.getResponseCode()!=HttpURLConnection.HTTP_NOT_FOUND )) {
                 System.out.println("http请求失败：" + connection);
                 return response;
             }
