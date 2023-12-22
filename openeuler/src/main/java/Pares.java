@@ -206,6 +206,10 @@ public class Pares {
             System.out.println("Failed to add service data");
             return null;
         }
+        if (!setGiteeData(r)) {
+            System.out.println("Failed to add setGitee data");
+            return null;
+        }
         return r;
     }
 
@@ -335,18 +339,16 @@ public class Pares {
         return true;
     }
 
-    public static List<Map<String, Object>> getGiteeData() {
-        List<Map<String, Object>> mappingArray = new ArrayList<>();
+    public static Boolean setGiteeData(List<Map<String, Object>> r) {
         if (GITEE_PROJS != null && !GITEE_PROJS.isEmpty()) {
             List<String> projectsList = Arrays.asList(new String(GITEE_PROJS).split(","));
             projectsList.stream().forEach(p -> {
                 String orgsUrl = String.valueOf(GITEE_REPOS_URL).replace("{org}", p);
                 String readmeUrl = String.valueOf(GITEE_README_URL).replace("{org}", p);
-                handGiteeData(orgsUrl, mappingArray,readmeUrl);
-
+                handGiteeData(orgsUrl, r,readmeUrl);
             });
         }
-        return mappingArray;
+        return true;
     }
 
     public static void handGiteeData(String orgsUrl, List<Map<String, Object>> handleList,String readmeUrl) {
