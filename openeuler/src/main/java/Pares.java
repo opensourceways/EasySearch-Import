@@ -14,6 +14,7 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -32,7 +33,9 @@ public class Pares {
     public static final String SHOWCASE = "showcase";
     public static final String EVENTS = "events";
     public static final String USERPRACTICE = "userPractice";
-
+    private static final String GITEE_REPOS_URL = System.getenv("GITEE_REPOS_URL");
+    private static final String GITEE_README_URL = System.getenv("GITEE_README_URL");
+    private static final String GITEE_PROJS = System.getenv("GITEE_PROJS");
     private static final String FORUM_DOMAIN = System.getenv("FORUM_DOMAIN");
     private static final String SERVICE_URL = System.getenv("SERVICE_URL");
 
@@ -203,6 +206,10 @@ public class Pares {
             System.out.println("Failed to add service data");
             return null;
         }
+        if (!setGiteeData(r)) {
+            System.out.println("Failed to add setGitee data");
+            return null;
+        }
         return r;
     }
 
@@ -216,7 +223,7 @@ public class Pares {
         for (int i = 0; ; i++) {
             req = path + i;
             try {
-                connection = sendHTTP(req, "GET");
+                connection = sendHTTP(req, "GET",null);
                 TimeUnit.SECONDS.sleep(30);
                 if (connection.getResponseCode() == 200) {
                     result = ReadInput(connection.getInputStream());
@@ -255,7 +262,7 @@ public class Pares {
             String slug = topic.getString("slug");
             path = String.format("%s/t/%s/%s.json?track_visit=true&forceLoad=true", FORUM_DOMAIN, slug, id);
             try {
-                connection = sendHTTP(path, "GET");
+                connection = sendHTTP(path, "GET",null);
                 if (connection.getResponseCode() == 200) {
                     result = ReadInput(connection.getInputStream());
                     JSONObject st = JSON.parseObject(result);
@@ -294,7 +301,7 @@ public class Pares {
     public static boolean setService(List<Map<String, Object>> r) {
         HttpURLConnection connection = null;
         try {
-            connection = sendHTTP(SERVICE_URL, "GET");
+            connection = sendHTTP(SERVICE_URL, "GET",null);
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 return false;
             }
@@ -332,14 +339,110 @@ public class Pares {
         return true;
     }
 
-    private static HttpURLConnection sendHTTP(String path, String method) throws IOException {
+    public static Boolean setGiteeData(List<Map<String, Object>> r) {
+        if (GITEE_PROJS != null && !GITEE_PROJS.isEmpty()) {
+            List<String> projectsList = Arrays.asList(new String(GITEE_PROJS).split(","));
+            projectsList.stream().forEach(p -> {
+                String orgsUrl = String.valueOf(GITEE_REPOS_URL).replace("{org}", p);
+                String readmeUrl = String.valueOf(GITEE_README_URL).replace("{org}", p);
+                handGiteeData(orgsUrl, r,readmeUrl);
+            });
+        }
+        return true;
+    }
+
+
+    public static void handGiteeData(String orgsUrl, List<Map<String, Object>> handleList,String readmeUrl) {
+        HttpURLConnection connection = null;
+        try {
+            JSONArray resultArray = new JSONArray();
+            Integer page = 0;
+            do {
+                page++;
+                StringBuilder urlBuilder = new StringBuilder(orgsUrl).append(URLEncoder.encode(String.valueOf(page), "utf-8"));
+                String httpResponse = getHttpResponse(urlBuilder.toString(),"GET",null);
+                if (httpResponse != null) {
+                    resultArray = JSONArray.parseArray(httpResponse);
+                    if (resultArray != null && resultArray.size() > 0) {
+                        resultArray.stream().forEach(a -> {
+                            try{
+                                JSONObject each = (JSONObject) a;
+                                Map<String, Object> date = new HashMap<>();
+                                String fullName = each.getString("full_name");
+                                date.put("title",fullName);
+                                date.put("path", each.getString("html_url"));
+                                date.put("type", "gitee");
+                                date.put("lang", "zh");
+                                date.put("textContent","");
+                                handleList.add(date);
+                                String description = each.getString("description");
+                                if(description !=null && !description.isEmpty() && !"null".equals(description)){
+                                    date.put("title",String.valueOf( new StringBuilder(fullName).append(" (").append(description).append(")")));
+                                }
+                                String readmeResponse = getHttpResponse(String.valueOf(readmeUrl).replace("{repo}",each.getString("path")),"GET",null);
+                                if(readmeResponse!=null){
+                                    JSONObject readmeJson = JSONObject.parseObject(readmeResponse);
+                                    date.put("textContent",decodeBase64(readmeJson.getString("content")));
+                                }
+                            }catch (Exception e){
+                                System.out.println("gitee数据处理错误："+e);
+                            }
+                        });
+                    }
+                }
+            } while (resultArray.size() == 20);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String getHttpResponse(String url ,String method,String param) {
+        String response = null;
+        HttpURLConnection connection = null;
+        try {
+            connection = sendHTTP(url, method,param);
+            if (connection == null || (connection.getResponseCode() != HttpURLConnection.HTTP_OK && connection.getResponseCode() != HttpURLConnection.HTTP_NOT_FOUND)) {
+                System.out.println("http请求失败：" + connection);
+                return response;
+            }
+            response = ReadInput(connection.getInputStream());
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("http请求失败：" + e.toString());
+        }finally {
+            if (null != connection) {
+                connection.disconnect();
+            }
+        }
+        return response;
+    }
+    public static String decodeBase64(String base64Str) {
+        String decodeStr="";
+        byte[] base64Data = Base64.getDecoder().decode(base64Str);
+        decodeStr=new String(base64Data, StandardCharsets.UTF_8);
+        return decodeStr;
+    }
+
+    private static HttpURLConnection sendHTTP(String path, String method,String param) throws IOException {
         URL url = new URL(path);
         HttpURLConnection connection = null;
         connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod(method);
         connection.setConnectTimeout(60000);
         connection.setReadTimeout(60000);
-        connection.connect();
+        if(param !=null){
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setDoOutput(true);
+            connection.connect();
+            try (OutputStream os = connection.getOutputStream()) {
+                byte[] input = param.getBytes("utf-8");
+                os.write(input);
+            }
+        }else {
+            connection.connect();
+        }
         return connection;
     }
 
