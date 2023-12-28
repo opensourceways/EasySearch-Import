@@ -27,7 +27,6 @@ public class App {
         System.out.println("import end");
         System.exit(0);
     }
-
     public static void fileDate() throws Exception {
         File indexFile = new File(TARGET);
         if (!indexFile.exists()) {

@@ -2,6 +2,10 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.commons.io.FileUtils;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
@@ -11,9 +15,13 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.yaml.snakeyaml.Yaml;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -32,10 +40,15 @@ public class Pares {
     public static final String SHOWCASE = "showcase";
     public static final String EVENTS = "events";
     public static final String USERPRACTICE = "userPractice";
-
+    public static  Map WEXIN_TOKEN =null;
+    private static final String GITEE_REPOS_URL = System.getenv("GITEE_REPOS_URL");
+    private static final String GITEE_README_URL = System.getenv("GITEE_README_URL");
+    private static final String GITEE_PROJS = System.getenv("GITEE_PROJS");
+    private static final String WEXIN_TOKEN_URL = System.getenv("WEXIN_TOKEN_URL");
+    private static final String WEXIN_PUBLICATION_RECORDS_URL = System.getenv("WEXIN_PUBLICATION_RECORDS_URL");
     private static final String FORUM_DOMAIN = System.getenv("FORUM_DOMAIN");
     private static final String SERVICE_URL = System.getenv("SERVICE_URL");
-
+    private static final String WHITEPAPER_URLS = System.getenv("WHITEPAPER_URLS");
 
     public static Map<String, Object> parse(File file) throws Exception {
         String originalPath = file.getPath();
@@ -203,7 +216,73 @@ public class Pares {
             System.out.println("Failed to add service data");
             return null;
         }
+        if (!setGiteeData(r)) {
+            System.out.println("Failed to add setGitee data");
+            return null;
+        }
+        if (!setWhitepaperData(r)) {
+            System.out.println("Failed to add setGitee data");
+            return null;
+        }
         return r;
+    }
+
+
+    public static Boolean setWhitepaperData(List<Map<String, Object>> r){
+        if (WHITEPAPER_URLS!=null){
+            String[] urls = WHITEPAPER_URLS.split(",");
+            for (int i = 0; i < urls.length; i++) {
+                getImgList(urls[i],r);
+            }
+        }
+        return true;
+    }
+
+    private static void getImgList( String pdfPath,List<Map<String, Object>> r)  {
+        try {
+            PDDocument pdfDoc = PDDocument.load(downloadFileByURL(pdfPath));
+            PDFRenderer pdfRenderer = new PDFRenderer(pdfDoc);
+            int numPages = pdfDoc.getNumberOfPages();
+            for (int i = 0; i < numPages; i++) {
+                BufferedImage image = pdfRenderer.renderImageWithDPI(i, 300, ImageType.RGB);
+
+                PDFTextStripper stripper = new PDFTextStripper();
+                stripper.setSortByPosition(true);// 排序
+                stripper.setStartPage(i + 1);//要解析的首页
+                stripper.setEndPage(i + 2);//要解析的结束页数
+                stripper.setWordSeparator("##");//单元格内容的分隔符号
+                stripper.setLineSeparator("\n");//行与行之间的分隔符号
+                String text = stripper.getText(pdfDoc);
+
+                //图片内容存储为base64编码
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+                ImageIO.write(image, "png", stream);
+                org.apache.commons.codec.binary.Base64 base = new org.apache.commons.codec.binary.Base64();
+                String base64 = base.encodeToString(stream.toByteArray());
+                HashMap<String, Object> result = new HashMap<>();
+                result.put("title", "");
+                result.put("type", "whitepaper");
+                result.put("lang", "zh");
+                result.put("path", new StringBuilder(pdfPath).append("#page=").append(i + 1).toString());
+                result.put("textContent", text);
+                result.put("data", base64);
+                r.add(result);
+            }
+            pdfDoc.close();
+        }catch (Exception e){
+            System.out.println(e.toString());
+        }
+
+    }
+    public static  byte[] downloadFileByURL(String fileURL) throws IOException {
+        URL url = new URL(fileURL);
+        URLConnection conn = url.openConnection();
+        InputStream in = conn.getInputStream();
+        byte[] bytes = in.readAllBytes();
+        in.close();
+        return bytes;
+
     }
 
     private static boolean setForum(List<Map<String, Object>> r) {
@@ -216,7 +295,7 @@ public class Pares {
         for (int i = 0; ; i++) {
             req = path + i;
             try {
-                connection = sendHTTP(req, "GET");
+                connection = sendHTTP(req, "GET",null);
                 TimeUnit.SECONDS.sleep(30);
                 if (connection.getResponseCode() == 200) {
                     result = ReadInput(connection.getInputStream());
@@ -255,7 +334,7 @@ public class Pares {
             String slug = topic.getString("slug");
             path = String.format("%s/t/%s/%s.json?track_visit=true&forceLoad=true", FORUM_DOMAIN, slug, id);
             try {
-                connection = sendHTTP(path, "GET");
+                connection = sendHTTP(path, "GET",null);
                 if (connection.getResponseCode() == 200) {
                     result = ReadInput(connection.getInputStream());
                     JSONObject st = JSON.parseObject(result);
@@ -294,7 +373,7 @@ public class Pares {
     public static boolean setService(List<Map<String, Object>> r) {
         HttpURLConnection connection = null;
         try {
-            connection = sendHTTP(SERVICE_URL, "GET");
+            connection = sendHTTP(SERVICE_URL, "GET",null);
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
                 return false;
             }
@@ -315,7 +394,7 @@ public class Pares {
                 if (datum.get("description") != null) {
                     textContentBuilder.append(datum.get("description"));
                 }
-                String textContent =  textContentBuilder.toString();
+                String textContent = textContentBuilder.toString();
 
                 jsonMap.put("textContent", textContent);
                 r.add(jsonMap);
@@ -332,14 +411,166 @@ public class Pares {
         return true;
     }
 
-    private static HttpURLConnection sendHTTP(String path, String method) throws IOException {
+    public static Boolean setGiteeData(List<Map<String, Object>> r) {
+        if (GITEE_PROJS != null && !GITEE_PROJS.isEmpty()) {
+            List<String> projectsList = Arrays.asList(new String(GITEE_PROJS).split(","));
+            projectsList.stream().forEach(p -> {
+                String orgsUrl = String.valueOf(GITEE_REPOS_URL).replace("{org}", p);
+                String readmeUrl = String.valueOf(GITEE_README_URL).replace("{org}", p);
+                handGiteeData(orgsUrl, r,readmeUrl);
+            });
+        }
+        return true;
+    }
+
+    public static Boolean setWeChaData(List<Map<String, Object>> r) {
+        HashMap<String, Object> requestParam = new HashMap<>();
+        Integer offset=0;
+        Integer totalCount=10;
+        //每页获取数量最大写死
+        requestParam.put("count",20);
+        requestParam.put("no_content",0);
+        do {
+            String wechatToken = getWechatToken(Boolean.FALSE);
+            if(wechatToken !=null) {
+                requestParam.put("offset",offset);
+                String httpResponse = getHttpResponse(new StringBuilder(WEXIN_PUBLICATION_RECORDS_URL).append(wechatToken).toString(),"POST",JSONObject.toJSONString(requestParam));
+                if(httpResponse!=null){
+                    JSONObject httpResponseJson = JSONObject.parseObject(httpResponse);
+                    if(httpResponseJson.containsKey("errcode")){
+                        if (httpResponseJson.getInteger("errcode").equals(40001)){
+                            getWechatToken(Boolean.TRUE);
+                            continue;
+                        }
+                    }
+                    Integer itemCount= httpResponseJson.getInteger("item_count");
+                    offset +=itemCount;
+                    totalCount=httpResponseJson.getInteger("total_count");
+                    if(itemCount>0){
+                        JSONArray item = httpResponseJson.getJSONArray("item");
+                        item.stream().forEach(i->{
+                            HashMap<String, Object> result = new HashMap<>();
+                            JSONObject itemData = (JSONObject) i;
+                            result.put("title",itemData.getString("title"));
+                            result.put("type", "wechat");
+                            result.put("lang","zh");
+                            result.put("path",itemData.getString("url"));
+                            result.put("textContent",itemData.getString("content"));
+                            result.put("description",itemData.getString("digest"));
+                            r.add(result);
+                        });
+                    }
+                }
+            }
+        }while (offset<totalCount);
+
+        return true;
+    }
+
+    public static String getWechatToken(Boolean isForceRefresh) {
+        long currentTimeMillis = System.currentTimeMillis();
+        if( isForceRefresh||Objects.isNull(WEXIN_TOKEN) ||currentTimeMillis-Long.getLong(String.valueOf(WEXIN_TOKEN.get("expires_in")))>0){
+            String httpResponse = getHttpResponse(WEXIN_TOKEN_URL,"GET",null);
+            if(httpResponse !=null ){
+                JSONObject  tokenJson = JSONObject.parseObject(httpResponse);
+                tokenJson.put("expires_in", currentTimeMillis+tokenJson.getLong("expires_in")*1000);
+                WEXIN_TOKEN=tokenJson;
+            }
+        }
+        return String.valueOf(WEXIN_TOKEN.get("access_token"));
+    }
+
+    public static void handGiteeData(String orgsUrl, List<Map<String, Object>> handleList,String readmeUrl) {
+        HttpURLConnection connection = null;
+        try {
+            JSONArray resultArray = new JSONArray();
+            Integer page = 0;
+            do {
+                page++;
+                StringBuilder urlBuilder = new StringBuilder(orgsUrl).append(URLEncoder.encode(String.valueOf(page), "utf-8"));
+                String httpResponse = getHttpResponse(urlBuilder.toString(),"GET",null);
+                if (httpResponse != null) {
+                    resultArray = JSONArray.parseArray(httpResponse);
+                    if (resultArray != null && resultArray.size() > 0) {
+                        resultArray.stream().forEach(a -> {
+                            try{
+                                JSONObject each = (JSONObject) a;
+                                Map<String, Object> date = new HashMap<>();
+                                String fullName = each.getString("full_name");
+                                date.put("title",fullName);
+                                date.put("path", each.getString("html_url"));
+                                date.put("type", "gitee");
+                                date.put("lang", "zh");
+                                date.put("textContent","");
+                                handleList.add(date);
+                                String description = each.getString("description");
+                                if(description !=null && !description.isEmpty() && !"null".equals(description)){
+                                    date.put("title",String.valueOf( new StringBuilder(fullName).append(" (").append(description).append(")")));
+                                }
+                                String readmeResponse = getHttpResponse(String.valueOf(readmeUrl).replace("{repo}",each.getString("path")),"GET",null);
+                                if(readmeResponse!=null){
+                                    JSONObject readmeJson = JSONObject.parseObject(readmeResponse);
+                                    date.put("textContent",decodeBase64(readmeJson.getString("content")));
+                                }
+                            }catch (Exception e){
+                                System.out.println("gitee数据处理错误："+e);
+                            }
+                        });
+                    }
+                }
+            } while (resultArray.size() == 20);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static String getHttpResponse(String url ,String method,String param) {
+        String response = null;
+        HttpURLConnection connection = null;
+        try {
+            connection = sendHTTP(url, method,param);
+            if (connection == null || (connection.getResponseCode() != HttpURLConnection.HTTP_OK && connection.getResponseCode() != HttpURLConnection.HTTP_NOT_FOUND)) {
+                System.out.println("http请求失败：" + connection);
+                return response;
+            }
+            response = ReadInput(connection.getInputStream());
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("http请求失败：" + e.toString());
+        }finally {
+            if (null != connection) {
+                connection.disconnect();
+            }
+        }
+        return response;
+    }
+    public static String decodeBase64(String base64Str) {
+        String decodeStr="";
+        byte[] base64Data = Base64.getDecoder().decode(base64Str);
+        decodeStr=new String(base64Data, StandardCharsets.UTF_8);
+        return decodeStr;
+    }
+
+    private static HttpURLConnection sendHTTP(String path, String method,String param) throws IOException {
         URL url = new URL(path);
         HttpURLConnection connection = null;
         connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod(method);
         connection.setConnectTimeout(60000);
         connection.setReadTimeout(60000);
-        connection.connect();
+        if(param !=null){
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setDoOutput(true);
+            connection.connect();
+            try (OutputStream os = connection.getOutputStream()) {
+                byte[] input = param.getBytes("utf-8");
+                os.write(input);
+            }
+        }else {
+            connection.connect();
+        }
         return connection;
     }
 
