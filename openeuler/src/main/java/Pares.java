@@ -368,22 +368,23 @@ public class Pares {
                             try{
                                 JSONObject each = (JSONObject) a;
                                 Map<String, Object> date = new HashMap<>();
-                                String fullName = each.getString("full_name");
-                                date.put("title",fullName);
+                                String name = each.getString("name");
+                                date.put("title",name);
                                 date.put("path", each.getString("html_url"));
                                 date.put("type", "gitee");
                                 date.put("lang", "zh");
-                                date.put("textContent","");
                                 handleList.add(date);
                                 String description = each.getString("description");
+                                StringBuilder textContentBuilder = new StringBuilder();
                                 if(description !=null && !description.isEmpty() && !"null".equals(description)){
-                                    date.put("title",String.valueOf( new StringBuilder(fullName).append(" (").append(description).append(")")));
+                                    textContentBuilder.append(description);
                                 }
                                 String readmeResponse = getHttpResponse(String.valueOf(readmeUrl).replace("{repo}",each.getString("path")),"GET",null);
                                 if(readmeResponse!=null){
                                     JSONObject readmeJson = JSONObject.parseObject(readmeResponse);
-                                    date.put("textContent",decodeBase64(readmeJson.getString("content")));
+                                    textContentBuilder.append("   ").append(decodeBase64(readmeJson.getString("content")));
                                 }
+                                date.put("textContent",textContentBuilder.toString());
                             }catch (Exception e){
                                 System.out.println("gitee数据处理错误："+e);
                             }
