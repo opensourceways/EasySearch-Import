@@ -344,6 +344,7 @@ public class Pares {
     }
 
     public static Boolean setGiteeData(List<Map<String, Object>> r) {
+        logger.info("开始更新gitee数据，初始size："+r.size());
         if (GITEE_PROJS != null && !GITEE_PROJS.isEmpty()) {
             List<String> projectsList = Arrays.asList(new String(GITEE_PROJS).split(","));
             projectsList.stream().forEach(p -> {
@@ -351,8 +352,10 @@ public class Pares {
                 String readmeUrl = String.valueOf(GITEE_README_URL).replace("{org}", p);
                 handGiteeData(orgsUrl, r, readmeUrl);
             });
+            logger.info("gitee数据更新完成，size："+r.size());
+            return true;
         }
-        return true;
+        return false;
     }
 
 
