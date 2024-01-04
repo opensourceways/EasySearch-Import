@@ -420,6 +420,8 @@ public class Pares {
             response = ReadInput(connection.getInputStream());
         } catch (Exception e) {
             logger.error("http请求失败：" + e.toString());
+            logger.error("http请求失败：" + e.getMessage());
+            logger.error("http请求失败參數：" + connection);
         } finally {
             if (null != connection) {
                 connection.disconnect();
