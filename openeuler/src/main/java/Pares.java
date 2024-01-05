@@ -2,6 +2,10 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.commons.io.FileUtils;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
@@ -13,9 +17,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -41,7 +48,7 @@ public class Pares {
     private static final String GITEE_PROJS = System.getenv("GITEE_PROJS");
     private static final String FORUM_DOMAIN = System.getenv("FORUM_DOMAIN");
     private static final String SERVICE_URL = System.getenv("SERVICE_URL");
-
+    private static final String WHITEPAPER_URLS = System.getenv("WHITEPAPER_URLS");
     private static final Logger logger = LoggerFactory.getLogger(Pares.class);
 
     public static Map<String, Object> parse(File file) throws Exception {
@@ -210,11 +217,73 @@ public class Pares {
             logger.error("Failed to add service data");
             return null;
         }
+        if (!setWhitepaperData(r)) {
+            logger.error("Failed to add whitepaperData data");
+            return null;
+        }
         if (!setGiteeData(r)) {
             logger.error("Failed to add setGitee data");
             return null;
         }
         return r;
+    }
+    public static Boolean setWhitepaperData(List<Map<String, Object>> r){
+        logger.info("開始導入白皮書,原始size:"+r.size());
+        logger.info("WHITEPAPER_URLS:"+ WHITEPAPER_URLS);
+        if (WHITEPAPER_URLS!=null){
+            String[] urls = WHITEPAPER_URLS.split(",");
+            for (int i = 0; i < urls.length; i++) {
+                getImgList(urls[i],r);
+            }
+        }
+        logger.info("導入白皮書完成,size:"+r.size());
+        return true;
+    }
+
+    private static void getImgList( String pdfPath,List<Map<String, Object>> r)  {
+        try {
+            PDDocument pdfDoc = PDDocument.load(downloadFileByURL(pdfPath));
+            PDFRenderer pdfRenderer = new PDFRenderer(pdfDoc);
+            int numPages = pdfDoc.getNumberOfPages();
+            for (int i = 0; i < numPages; i++) {
+                BufferedImage image = pdfRenderer.renderImageWithDPI(i, 300, ImageType.RGB);
+
+                PDFTextStripper stripper = new PDFTextStripper();
+                stripper.setSortByPosition(true);// 排序
+                stripper.setStartPage(i + 1);//要解析的首页
+                stripper.setEndPage(i + 2);//要解析的结束页数
+                stripper.setWordSeparator("##");//单元格内容的分隔符号
+                stripper.setLineSeparator("\n");//行与行之间的分隔符号
+                String text = stripper.getText(pdfDoc);
+
+                //图片内容存储为base64编码
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+                ImageIO.write(image, "png", stream);
+                org.apache.commons.codec.binary.Base64 base = new org.apache.commons.codec.binary.Base64();
+                String base64 = base.encodeToString(stream.toByteArray());
+                HashMap<String, Object> result = new HashMap<>();
+                result.put("type", "whitepaper");
+                result.put("lang", "zh");
+                result.put("path", new StringBuilder(pdfPath).append("#page=").append(i + 1).toString());
+                result.put("textContent", text);
+                result.put("archives", base64);
+                r.add(result);
+            }
+            pdfDoc.close();
+        }catch (Exception e){
+            logger.error(e.toString());
+        }
+
+    }
+    public static  byte[] downloadFileByURL(String fileURL) throws IOException {
+        URL url = new URL(fileURL);
+        URLConnection conn = url.openConnection();
+        InputStream in = conn.getInputStream();
+        byte[] bytes = in.readAllBytes();
+        in.close();
+        return bytes;
+
     }
 
     private static boolean setForum(List<Map<String, Object>> r) {
