@@ -1,4 +1,6 @@
 import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
@@ -12,6 +14,7 @@ public class App {
 
     private static final String INDEX_PREFIX = "openeuler_articles";
 
+    private static final Logger logger = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) {
         try {
@@ -20,22 +23,22 @@ public class App {
             PublicClient.makeIndex(INDEX_PREFIX + "_en", MAPPING_PATH);
             fileDate();
         } catch (Exception e) {
-            System.out.println(e.getMessage());
-            e.printStackTrace();
+            logger.error(e.getMessage());
+            logger.error(e.toString());
         }
 
-        System.out.println("import end");
+        logger.info("import end");
         System.exit(0);
     }
 
     public static void fileDate() throws Exception {
         File indexFile = new File(TARGET);
         if (!indexFile.exists()) {
-            System.out.printf("%s folder does not exist%n", indexFile.getPath());
+            logger.info("%s folder does not exist%n", indexFile.getPath());
             return;
         }
 
-        System.out.println("begin to update document");
+        logger.info("begin to update document");
 
         Set<String> idSet = new HashSet<>();
 
@@ -49,11 +52,11 @@ public class App {
                         PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
                         idSet.add((String) escape.get("path"));
                     } else {
-                        System.out.println("parse null : " + paresFile.getPath());
+                        logger.info("parse null : " + paresFile.getPath());
                     }
                 } catch (Exception e) {
-                    System.out.println(paresFile.getPath());
-                    System.out.println(e.getMessage());
+                    logger.error(paresFile.getPath());
+                    logger.error(e.getMessage());
                 }
             }
         }
@@ -68,7 +71,7 @@ public class App {
             idSet.add((String) lm.get("path"));
         }
 
-        System.out.println("start delete expired document");
+        logger.info("start delete expired document");
         PublicClient.deleteExpired(idSet, INDEX_PREFIX + "_*");
     }
 
