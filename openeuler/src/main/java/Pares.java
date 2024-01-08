@@ -227,27 +227,26 @@ public class Pares {
         }
         return r;
     }
-    public static Boolean setWhitepaperData(List<Map<String, Object>> r){
-        logger.info("開始導入白皮書,原始size:"+r.size());
-        logger.info("WHITEPAPER_URLS:"+ WHITEPAPER_URLS);
-        if (WHITEPAPER_URLS!=null){
+
+    public static Boolean setWhitepaperData(List<Map<String, Object>> r) {
+        logger.info("開始導入白皮書,原始size:" + r.size());
+        logger.info("WHITEPAPER_URLS:" + WHITEPAPER_URLS);
+        if (WHITEPAPER_URLS != null) {
             String[] urls = WHITEPAPER_URLS.split(",");
             for (int i = 0; i < urls.length; i++) {
-                getImgList(urls[i],r);
+                getImgList(urls[i], r);
             }
         }
-        logger.info("導入白皮書完成,size:"+r.size());
+        logger.info("導入白皮書完成,size:" + r.size());
         return true;
     }
 
-    private static void getImgList( String pdfPath,List<Map<String, Object>> r)  {
+    private static void getImgList(String pdfPath, List<Map<String, Object>> r) {
         try {
             PDDocument pdfDoc = PDDocument.load(downloadFileByURL(pdfPath));
             PDFRenderer pdfRenderer = new PDFRenderer(pdfDoc);
             int numPages = pdfDoc.getNumberOfPages();
             for (int i = 0; i < numPages; i++) {
-                BufferedImage image = pdfRenderer.renderImageWithDPI(i, 300, ImageType.RGB);
-
                 PDFTextStripper stripper = new PDFTextStripper();
                 stripper.setSortByPosition(true);// 排序
                 stripper.setStartPage(i + 1);//要解析的首页
@@ -255,28 +254,21 @@ public class Pares {
                 stripper.setWordSeparator("##");//单元格内容的分隔符号
                 stripper.setLineSeparator("\n");//行与行之间的分隔符号
                 String text = stripper.getText(pdfDoc);
-
-                //图片内容存储为base64编码
-                ByteArrayOutputStream stream = new ByteArrayOutputStream();
-
-                ImageIO.write(image, "png", stream);
-                org.apache.commons.codec.binary.Base64 base = new org.apache.commons.codec.binary.Base64();
-                String base64 = base.encodeToString(stream.toByteArray());
                 HashMap<String, Object> result = new HashMap<>();
                 result.put("type", "whitepaper");
                 result.put("lang", "zh");
                 result.put("path", new StringBuilder(pdfPath).append("#page=").append(i + 1).toString());
                 result.put("textContent", text);
-                result.put("archives", base64);
                 r.add(result);
             }
             pdfDoc.close();
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error(e.toString());
         }
 
     }
-    public static  byte[] downloadFileByURL(String fileURL) throws IOException {
+
+    public static byte[] downloadFileByURL(String fileURL) throws IOException {
         URL url = new URL(fileURL);
         URLConnection conn = url.openConnection();
         InputStream in = conn.getInputStream();
@@ -413,7 +405,7 @@ public class Pares {
     }
 
     public static Boolean setGiteeData(List<Map<String, Object>> r) {
-        logger.info("开始更新gitee数据，初始size："+r.size());
+        logger.info("开始更新gitee数据，初始size：" + r.size());
         if (GITEE_PROJS != null && !GITEE_PROJS.isEmpty()) {
             List<String> projectsList = Arrays.asList(new String(GITEE_PROJS).split(","));
             projectsList.stream().forEach(p -> {
@@ -421,7 +413,7 @@ public class Pares {
                 String readmeUrl = String.valueOf(GITEE_README_URL).replace("{org}", p);
                 handGiteeData(orgsUrl, r, readmeUrl);
             });
-            logger.info("gitee数据更新完成，size："+r.size());
+            logger.info("gitee数据更新完成，size：" + r.size());
             return true;
         }
         return false;
