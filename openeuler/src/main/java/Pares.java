@@ -27,6 +27,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -49,6 +50,10 @@ public class Pares {
     private static final String FORUM_DOMAIN = System.getenv("FORUM_DOMAIN");
     private static final String SERVICE_URL = System.getenv("SERVICE_URL");
     private static final String WHITEPAPER_URLS = System.getenv("WHITEPAPER_URLS");
+    private static final String PACKAGES_DB_PRIORIT = System.getenv("PACKAGES_DB_PRIORIT");
+    private static final String PACKAGES_SRC = System.getenv("PACKAGES_SRC");
+    private static final String PACKAGES_SRC_DETAIL = System.getenv("PACKAGES_SRC_DETAIL");
+    private static final String PACKAGES_SRC_DOC = System.getenv("PACKAGES_SRC_DOC");
     private static final Logger logger = LoggerFactory.getLogger(Pares.class);
 
     public static Map<String, Object> parse(File file) throws Exception {
@@ -228,6 +233,94 @@ public class Pares {
         return r;
     }
 
+    public static Boolean setPackageManagementData(List<Map<String, Object>> r) {
+        logger.info("PackagemanagementData: " + r.size());
+        logger.info("PACKAGES_DB_PRIORIT:" + PACKAGES_DB_PRIORIT);
+        if (PACKAGES_DB_PRIORIT != null) {
+            String httpResponse = getHttpResponse(PACKAGES_DB_PRIORIT, "GET", null, null);
+            JSONObject dbPriorityObj = getPackagesSuccessRequestObj(httpResponse);
+            if (dbPriorityObj != null) {
+                JSONArray resp = dbPriorityObj.getJSONArray("resp");
+                CountDownLatch countDownLatch = new CountDownLatch(resp.size());
+                resp.parallelStream().forEach(m -> {
+                    String srcUrl = String.valueOf(PACKAGES_SRC).replace("{database_name}", String.valueOf(m));
+                    handPackagesData(srcUrl, r, String.valueOf(m));
+                    countDownLatch.countDown();
+                });
+                try {
+                    countDownLatch.await();
+                } catch (InterruptedException e) {
+                    logger.error(e.toString());
+                }
+            }
+        }
+        logger.info("packages导入完成,size:" + r.size());
+        return true;
+    }
+
+    public static void handPackagesData(String srcUrl, List<Map<String, Object>> handleList, String databaseName) {
+        try {
+            JSONArray resultArray = new JSONArray();
+            Integer pageNum = 0;
+            do {
+                pageNum++;
+                StringBuilder urlBuilder = new StringBuilder(srcUrl).append(URLEncoder.encode(String.valueOf(pageNum), "utf-8"));
+                String httpResponse = getHttpResponse(urlBuilder.toString(), "GET", null, null);
+                JSONObject srcObj = getPackagesSuccessRequestObj(httpResponse);
+                if (srcObj != null) {
+                    JSONArray resp = srcObj.getJSONArray("resp");
+                    resp.stream().forEach(r -> {
+                        JSONObject eachResp = (JSONObject) r;
+                        Map<String, Object> result = new HashMap<>();
+                        String pkgName = eachResp.getString("pkg_name");
+                        result.put("title", pkgName);
+                        result.put("lang", "zh");
+                        result.put("version", databaseName);
+                        String[] split = databaseName.split("openeuler-");
+                        if (split != null && split.length > 1)
+                            result.put("version", split[1].toUpperCase(Locale.ROOT).replace("-", "_"));
+                        result.put("path", String.valueOf(PACKAGES_SRC_DETAIL).replace("{pkg_name}", pkgName).replace("{database_name}", databaseName));
+                        result.put("type", "packages");
+                        setPackagesDescription(databaseName, pkgName, result);
+                        handleList.add(result);
+                    });
+                }
+            } while (resultArray.size() == 100);
+
+        } catch (Exception e) {
+            logger.error(e.toString());
+        }
+    }
+
+    public static void setPackagesDescription(String databaseName, String pkgName, Map<String, Object> result) {
+        try {
+            String srcDocUrl = String.valueOf(PACKAGES_SRC_DOC).replace("{database_name}", databaseName).replace("{pkg_name}", pkgName);
+            String httpResponse = getHttpResponse(srcDocUrl, "GET", null, null);
+            JSONObject srcObj = getPackagesSuccessRequestObj(httpResponse);
+            if (srcObj != null) {
+                JSONObject resp = srcObj.getJSONObject("resp");
+                JSONArray detailArray = resp.getJSONArray(databaseName);
+                if (detailArray != null && detailArray.size() > 0) {
+                    JSONObject detail = detailArray.getJSONObject(0);
+                    result.put("textContent", detail.getString("description"));
+                    result.put("secondaryTitle", detail.getString("summary"));
+                }
+            }
+        } catch (Exception e) {
+            logger.error(e.toString());
+        }
+    }
+
+    public static JSONObject getPackagesSuccessRequestObj(String httpResponse) {
+        if (httpResponse != null) {
+            JSONObject srcObj = JSONObject.parseObject(httpResponse);
+            if (srcObj != null && srcObj.containsKey("code") && "200".equals(srcObj.getString("code")) && srcObj.containsKey("resp")) {
+                return srcObj;
+            }
+        }
+        return null;
+    }
+
     public static Boolean setWhitepaperData(List<Map<String, Object>> r) {
         logger.info("開始導入白皮書,原始size:" + r.size());
         logger.info("WHITEPAPER_URLS:" + WHITEPAPER_URLS);
@@ -244,7 +337,6 @@ public class Pares {
     private static void getImgList(String pdfPath, List<Map<String, Object>> r) {
         try {
             PDDocument pdfDoc = PDDocument.load(downloadFileByURL(pdfPath));
-            PDFRenderer pdfRenderer = new PDFRenderer(pdfDoc);
             int numPages = pdfDoc.getNumberOfPages();
             for (int i = 0; i < numPages; i++) {
                 PDFTextStripper stripper = new PDFTextStripper();
@@ -408,11 +500,19 @@ public class Pares {
         logger.info("开始更新gitee数据，初始size：" + r.size());
         if (GITEE_PROJS != null && !GITEE_PROJS.isEmpty()) {
             List<String> projectsList = Arrays.asList(new String(GITEE_PROJS).split(","));
-            projectsList.stream().forEach(p -> {
+            CountDownLatch countDownLatch = new CountDownLatch(projectsList.size());
+            projectsList.parallelStream().forEach(p -> {
                 String orgsUrl = String.valueOf(GITEE_REPOS_URL).replace("{org}", p);
                 String readmeUrl = String.valueOf(GITEE_README_URL).replace("{org}", p);
                 handGiteeData(orgsUrl, r, readmeUrl);
+                logger.info(p + "的gitee数据更新完成");
+                countDownLatch.countDown();
             });
+            try {
+                countDownLatch.wait();
+            } catch (InterruptedException e) {
+                logger.error(e.toString());
+            }
             logger.info("gitee数据更新完成，size：" + r.size());
             return true;
         }
