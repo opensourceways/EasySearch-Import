@@ -374,9 +374,15 @@ public class Pares {
                 result.put("lang", "zh");
                 result.put("path", new StringBuilder(pdfPath).append("#page=").append(i + 1).toString());
                 result.put("textContent", text);
-                result.put("title", title);
+                result.put("secondaryTitle", title);
                 r.add(result);
             }
+            HashMap<String, Object> pdfResult = new HashMap<>();
+            pdfResult.put("type", "whitepaper");
+            pdfResult.put("lang", "zh");
+            pdfResult.put("path", pdfPath);
+            pdfResult.put("title", title);
+            r.add(pdfResult);
             pdfDoc.close();
         } catch (Exception e) {
             logger.error(e.toString());
