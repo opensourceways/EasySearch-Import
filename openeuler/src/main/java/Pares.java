@@ -248,8 +248,8 @@ public class Pares {
         whitepaperThread.start();
         giteeDataThread.start();
         try {
-            countDownLatch.wait();
-        } catch (InterruptedException e) {
+            countDownLatch.await();
+        } catch (Exception e) {
             logger.error(e.toString());
         }
         logger.info("geData success size:"+r.size());
@@ -532,7 +532,7 @@ public class Pares {
                 countDownLatch.countDown();
             });
             try {
-                countDownLatch.wait();
+                countDownLatch.await();
             } catch (InterruptedException e) {
                 logger.error(e.toString());
             }
