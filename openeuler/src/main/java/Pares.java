@@ -252,7 +252,7 @@ public class Pares {
         } catch (Exception e) {
             logger.error(e.toString());
         }
-        logger.info("geData success size:"+r.size());
+        logger.info("geData success size:" + r.size());
         return r;
     }
 
@@ -288,7 +288,8 @@ public class Pares {
             do {
                 pageNum++;
                 StringBuilder urlBuilder = new StringBuilder(srcUrl).append(URLEncoder.encode(String.valueOf(pageNum), "utf-8"));
-                String httpResponse = getHttpResponse(urlBuilder.toString(), "GET", null, null);
+                Map<String, String> randomIpHeader = getRandomIpHeader();
+                String httpResponse = getHttpResponse(urlBuilder.toString(), "GET", null, randomIpHeader);
                 JSONObject srcObj = getPackagesSuccessRequestObj(httpResponse);
                 if (srcObj != null) {
                     resultArray = srcObj.getJSONArray("resp");
@@ -318,7 +319,8 @@ public class Pares {
     public static void setPackagesDescription(String databaseName, String pkgName, Map<String, Object> result) {
         try {
             String srcDocUrl = String.valueOf(PACKAGES_SRC_DOC).replace("{database_name}", databaseName).replace("{pkg_name}", pkgName);
-            String httpResponse = getHttpResponse(srcDocUrl, "GET", null, null);
+            Map<String, String> randomIpHeader = getRandomIpHeader();
+            String httpResponse = getHttpResponse(srcDocUrl, "GET", null, randomIpHeader);
             JSONObject srcObj = getPackagesSuccessRequestObj(httpResponse);
             if (srcObj != null) {
                 JSONObject resp = srcObj.getJSONObject("resp");
@@ -662,5 +664,17 @@ public class Pares {
             logger.error(e.getMessage());
         }
         return sbf.toString();
+    }
+
+    public static Map<String, String> getRandomIpHeader() {
+        Random random = new Random(System.currentTimeMillis());
+        String ip = (random.nextInt(255) + 1) + "." + (random.nextInt(255) + 1) + "." + (random.nextInt(255) + 1) + "."
+                + (random.nextInt(255) + 1);
+        HashMap<String, String> header = new HashMap<>();
+        header.put("X-Forwarded-For", ip);
+        header.put("HTTP_X_FORWARDED_FOR", ip);
+        header.put("HTTP_CLIENT_IP", ip);
+        header.put("REMOTE_ADDR", ip);
+        return header;
     }
 }
