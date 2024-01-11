@@ -268,8 +268,8 @@ public class Pares {
                 String httpResponse = getHttpResponse(urlBuilder.toString(), "GET", null, null);
                 JSONObject srcObj = getPackagesSuccessRequestObj(httpResponse);
                 if (srcObj != null) {
-                    JSONArray resp = srcObj.getJSONArray("resp");
-                    resp.stream().forEach(r -> {
+                    resultArray = srcObj.getJSONArray("resp");
+                    resultArray.stream().forEach(r -> {
                         JSONObject eachResp = (JSONObject) r;
                         Map<String, Object> result = new HashMap<>();
                         String pkgName = eachResp.getString("pkg_name");
