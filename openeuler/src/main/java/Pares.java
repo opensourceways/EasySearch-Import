@@ -20,10 +20,7 @@ import org.yaml.snakeyaml.Yaml;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -361,6 +358,7 @@ public class Pares {
 
     private static void getImgList(String pdfPath, List<Map<String, Object>> r) {
         try {
+            String title = URLDecoder.decode(pdfPath.split("whitepaper/")[1], "UTF-8");
             PDDocument pdfDoc = PDDocument.load(downloadFileByURL(pdfPath));
             int numPages = pdfDoc.getNumberOfPages();
             for (int i = 0; i < numPages; i++) {
@@ -368,7 +366,7 @@ public class Pares {
                 stripper.setSortByPosition(true);// 排序
                 stripper.setStartPage(i + 1);//要解析的首页
                 stripper.setEndPage(i + 2);//要解析的结束页数
-                stripper.setWordSeparator("##");//单元格内容的分隔符号
+                stripper.setWordSeparator(" ");//单元格内容的分隔符号
                 stripper.setLineSeparator("\n");//行与行之间的分隔符号
                 String text = stripper.getText(pdfDoc);
                 HashMap<String, Object> result = new HashMap<>();
@@ -376,6 +374,7 @@ public class Pares {
                 result.put("lang", "zh");
                 result.put("path", new StringBuilder(pdfPath).append("#page=").append(i + 1).toString());
                 result.put("textContent", text);
+                result.put("title", title);
                 r.add(result);
             }
             pdfDoc.close();
