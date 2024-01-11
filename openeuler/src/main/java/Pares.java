@@ -214,22 +214,45 @@ public class Pares {
     public static List<Map<String, Object>> customizeData() {
         logger.info("begin update customizeData");
         List<Map<String, Object>> r = new ArrayList<>();
-        if (!setForum(r)) {
-            logger.error("Failed to add forum data");
-            return null;
+        CountDownLatch countDownLatch = new CountDownLatch(4);
+        Thread formThread = new Thread(() -> {
+            if (!setForum(r)) {
+                logger.error("Failed to add forum data");
+            }
+            logger.info("setForum success");
+            countDownLatch.countDown();
+        });
+        Thread serviceThread = new Thread(() -> {
+            if (!setService(r)) {
+                logger.error("Failed to add service data");
+            }
+            logger.info("setService success");
+            countDownLatch.countDown();
+        });
+        Thread whitepaperThread = new Thread(() -> {
+            if (!setWhitepaperData(r)) {
+                logger.error("Failed to add whitepaperData data");
+            }
+            logger.info("setWhitepaperData success");
+            countDownLatch.countDown();
+        });
+        Thread giteeDataThread = new Thread(() -> {
+            if (!setGiteeData(r)) {
+                logger.error("Failed to add setGitee data");
+            }
+            logger.info("setGiteeData success");
+            countDownLatch.countDown();
+        });
+        formThread.start();
+        serviceThread.start();
+        whitepaperThread.start();
+        giteeDataThread.start();
+        try {
+            countDownLatch.wait();
+        } catch (InterruptedException e) {
+            logger.error(e.toString());
         }
-        if (!setService(r)) {
-            logger.error("Failed to add service data");
-            return null;
-        }
-        if (!setWhitepaperData(r)) {
-            logger.error("Failed to add whitepaperData data");
-            return null;
-        }
-        if (!setGiteeData(r)) {
-            logger.error("Failed to add setGitee data");
-            return null;
-        }
+        logger.info("geData success size:"+r.size());
         return r;
     }
 
