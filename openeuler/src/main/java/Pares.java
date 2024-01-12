@@ -2,6 +2,10 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.commons.io.FileUtils;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
 import org.commonmark.renderer.html.HtmlRenderer;
@@ -13,13 +17,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,7 +46,11 @@ public class Pares {
     private static final String GITEE_PROJS = System.getenv("GITEE_PROJS");
     private static final String FORUM_DOMAIN = System.getenv("FORUM_DOMAIN");
     private static final String SERVICE_URL = System.getenv("SERVICE_URL");
-
+    private static final String WHITEPAPER_URLS = System.getenv("WHITEPAPER_URLS");
+    private static final String PACKAGES_DB_PRIORIT = System.getenv("PACKAGES_DB_PRIORIT");
+    private static final String PACKAGES_SRC = System.getenv("PACKAGES_SRC");
+    private static final String PACKAGES_SRC_DETAIL = System.getenv("PACKAGES_SRC_DETAIL");
+    private static final String PACKAGES_SRC_DOC = System.getenv("PACKAGES_SRC_DOC");
     private static final Logger logger = LoggerFactory.getLogger(Pares.class);
 
     public static Map<String, Object> parse(File file) throws Exception {
@@ -202,19 +211,193 @@ public class Pares {
     public static List<Map<String, Object>> customizeData() {
         logger.info("begin update customizeData");
         List<Map<String, Object>> r = new ArrayList<>();
-        if (!setForum(r)) {
-            logger.error("Failed to add forum data");
-            return null;
+        CountDownLatch countDownLatch = new CountDownLatch(4);
+        Thread formThread = new Thread(() -> {
+            if (!setForum(r)) {
+                logger.error("Failed to add forum data");
+            }
+            logger.info("setForum success");
+            countDownLatch.countDown();
+        });
+        Thread serviceThread = new Thread(() -> {
+            if (!setService(r)) {
+                logger.error("Failed to add service data");
+            }
+            logger.info("setService success");
+            countDownLatch.countDown();
+        });
+        Thread whitepaperThread = new Thread(() -> {
+            if (!setWhitepaperData(r)) {
+                logger.error("Failed to add whitepaperData data");
+            }
+            logger.info("setWhitepaperData success");
+            countDownLatch.countDown();
+        });
+        Thread giteeDataThread = new Thread(() -> {
+            if (!setGiteeData(r)) {
+                logger.error("Failed to add setGitee data");
+            }
+            logger.info("setGiteeData success");
+            countDownLatch.countDown();
+        });
+        formThread.start();
+        serviceThread.start();
+        whitepaperThread.start();
+        giteeDataThread.start();
+        try {
+            countDownLatch.await();
+        } catch (Exception e) {
+            logger.error(e.toString());
         }
-        if (!setService(r)) {
-            logger.error("Failed to add service data");
-            return null;
-        }
-        if (!setGiteeData(r)) {
-            logger.error("Failed to add setGitee data");
-            return null;
-        }
+        logger.info("geData success size:" + r.size());
         return r;
+    }
+
+    public static Boolean setPackageManagementData(List<Map<String, Object>> r) {
+        logger.info("PackagemanagementData: " + r.size());
+        logger.info("PACKAGES_DB_PRIORIT:" + PACKAGES_DB_PRIORIT);
+        if (PACKAGES_DB_PRIORIT != null) {
+            String httpResponse = getHttpResponse(PACKAGES_DB_PRIORIT, "GET", null, null);
+            JSONObject dbPriorityObj = getPackagesSuccessRequestObj(httpResponse);
+            if (dbPriorityObj != null) {
+                JSONArray resp = dbPriorityObj.getJSONArray("resp");
+                CountDownLatch countDownLatch = new CountDownLatch(resp.size());
+                resp.parallelStream().forEach(m -> {
+                    String srcUrl = String.valueOf(PACKAGES_SRC).replace("{database_name}", String.valueOf(m));
+                    handPackagesData(srcUrl, r, String.valueOf(m));
+                    countDownLatch.countDown();
+                });
+                try {
+                    countDownLatch.await();
+                } catch (InterruptedException e) {
+                    logger.error(e.toString());
+                }
+            }
+        }
+        logger.info("packages导入完成,size:" + r.size());
+        return true;
+    }
+
+    public static void handPackagesData(String srcUrl, List<Map<String, Object>> handleList, String databaseName) {
+        try {
+            JSONArray resultArray = new JSONArray();
+            Integer pageNum = 0;
+            do {
+                pageNum++;
+                StringBuilder urlBuilder = new StringBuilder(srcUrl).append(URLEncoder.encode(String.valueOf(pageNum), "utf-8"));
+                Map<String, String> randomIpHeader = getRandomIpHeader();
+                String httpResponse = getHttpResponse(urlBuilder.toString(), "GET", null, randomIpHeader);
+                JSONObject srcObj = getPackagesSuccessRequestObj(httpResponse);
+                if (srcObj != null) {
+                    resultArray = srcObj.getJSONArray("resp");
+                    resultArray.stream().forEach(r -> {
+                        JSONObject eachResp = (JSONObject) r;
+                        Map<String, Object> result = new HashMap<>();
+                        String pkgName = eachResp.getString("pkg_name");
+                        result.put("title", pkgName);
+                        result.put("lang", "zh");
+                        result.put("version", databaseName);
+                        String[] split = databaseName.split("openeuler-");
+                        if (split != null && split.length > 1)
+                            result.put("version", split[1].toUpperCase(Locale.ROOT).replace("-", "_"));
+                        result.put("path", String.valueOf(PACKAGES_SRC_DETAIL).replace("{pkg_name}", pkgName).replace("{database_name}", databaseName));
+                        result.put("type", "packages");
+                        setPackagesDescription(databaseName, pkgName, result);
+                        handleList.add(result);
+                    });
+                }
+            } while (resultArray.size() == 100);
+
+        } catch (Exception e) {
+            logger.error(e.toString());
+        }
+    }
+
+    public static void setPackagesDescription(String databaseName, String pkgName, Map<String, Object> result) {
+        try {
+            String srcDocUrl = String.valueOf(PACKAGES_SRC_DOC).replace("{database_name}", databaseName).replace("{pkg_name}", pkgName);
+            Map<String, String> randomIpHeader = getRandomIpHeader();
+            String httpResponse = getHttpResponse(srcDocUrl, "GET", null, randomIpHeader);
+            JSONObject srcObj = getPackagesSuccessRequestObj(httpResponse);
+            if (srcObj != null) {
+                JSONObject resp = srcObj.getJSONObject("resp");
+                JSONArray detailArray = resp.getJSONArray(databaseName);
+                if (detailArray != null && detailArray.size() > 0) {
+                    JSONObject detail = detailArray.getJSONObject(0);
+                    result.put("textContent", detail.getString("description"));
+                    result.put("secondaryTitle", detail.getString("summary"));
+                }
+            }
+        } catch (Exception e) {
+            logger.error(e.toString());
+        }
+    }
+
+    public static JSONObject getPackagesSuccessRequestObj(String httpResponse) {
+        if (httpResponse != null) {
+            JSONObject srcObj = JSONObject.parseObject(httpResponse);
+            if (srcObj != null && srcObj.containsKey("code") && "200".equals(srcObj.getString("code")) && srcObj.containsKey("resp")) {
+                return srcObj;
+            }
+        }
+        return null;
+    }
+
+    public static Boolean setWhitepaperData(List<Map<String, Object>> r) {
+        logger.info("開始導入白皮書,原始size:" + r.size());
+        logger.info("WHITEPAPER_URLS:" + WHITEPAPER_URLS);
+        if (WHITEPAPER_URLS != null) {
+            String[] urls = WHITEPAPER_URLS.split(",");
+            for (int i = 0; i < urls.length; i++) {
+                getImgList(urls[i], r);
+            }
+        }
+        logger.info("導入白皮書完成,size:" + r.size());
+        return true;
+    }
+
+    private static void getImgList(String pdfPath, List<Map<String, Object>> r) {
+        try {
+            String title = URLDecoder.decode(pdfPath.split("whitepaper/")[1], "UTF-8");
+            PDDocument pdfDoc = PDDocument.load(downloadFileByURL(pdfPath));
+            int numPages = pdfDoc.getNumberOfPages();
+            for (int i = 0; i < numPages; i++) {
+                PDFTextStripper stripper = new PDFTextStripper();
+                stripper.setSortByPosition(true);// 排序
+                stripper.setStartPage(i + 1);//要解析的首页
+                stripper.setEndPage(i + 2);//要解析的结束页数
+                stripper.setWordSeparator(" ");//单元格内容的分隔符号
+                stripper.setLineSeparator("\n");//行与行之间的分隔符号
+                String text = stripper.getText(pdfDoc);
+                HashMap<String, Object> result = new HashMap<>();
+                result.put("type", "whitepaper");
+                result.put("lang", "zh");
+                result.put("path", new StringBuilder(pdfPath).append("#page=").append(i + 1).toString());
+                result.put("textContent", text);
+                result.put("secondaryTitle", title);
+                r.add(result);
+            }
+            HashMap<String, Object> pdfResult = new HashMap<>();
+            pdfResult.put("type", "whitepaper");
+            pdfResult.put("lang", "zh");
+            pdfResult.put("path", pdfPath);
+            pdfResult.put("title", title);
+            r.add(pdfResult);
+            pdfDoc.close();
+        } catch (Exception e) {
+            logger.error(e.toString());
+        }
+
+    }
+
+    public static byte[] downloadFileByURL(String fileURL) throws IOException {
+        URL url = new URL(fileURL);
+        URLConnection conn = url.openConnection();
+        InputStream in = conn.getInputStream();
+        byte[] bytes = in.readAllBytes();
+        in.close();
+        return bytes;
+
     }
 
     private static boolean setForum(List<Map<String, Object>> r) {
@@ -344,15 +527,23 @@ public class Pares {
     }
 
     public static Boolean setGiteeData(List<Map<String, Object>> r) {
-        logger.info("开始更新gitee数据，初始size："+r.size());
+        logger.info("开始更新gitee数据，初始size：" + r.size());
         if (GITEE_PROJS != null && !GITEE_PROJS.isEmpty()) {
             List<String> projectsList = Arrays.asList(new String(GITEE_PROJS).split(","));
-            projectsList.stream().forEach(p -> {
+            CountDownLatch countDownLatch = new CountDownLatch(projectsList.size());
+            projectsList.parallelStream().forEach(p -> {
                 String orgsUrl = String.valueOf(GITEE_REPOS_URL).replace("{org}", p);
                 String readmeUrl = String.valueOf(GITEE_README_URL).replace("{org}", p);
                 handGiteeData(orgsUrl, r, readmeUrl);
+                logger.info(p + "的gitee数据更新完成");
+                countDownLatch.countDown();
             });
-            logger.info("gitee数据更新完成，size："+r.size());
+            try {
+                countDownLatch.await();
+            } catch (InterruptedException e) {
+                logger.error(e.toString());
+            }
+            logger.info("gitee数据更新完成，size：" + r.size());
             return true;
         }
         return false;
@@ -478,5 +669,17 @@ public class Pares {
             logger.error(e.getMessage());
         }
         return sbf.toString();
+    }
+
+    public static Map<String, String> getRandomIpHeader() {
+        Random random = new Random(System.currentTimeMillis());
+        String ip = (random.nextInt(255) + 1) + "." + (random.nextInt(255) + 1) + "." + (random.nextInt(255) + 1) + "."
+                + (random.nextInt(255) + 1);
+        HashMap<String, String> header = new HashMap<>();
+        header.put("X-Forwarded-For", ip);
+        header.put("HTTP_X_FORWARDED_FOR", ip);
+        header.put("HTTP_CLIENT_IP", ip);
+        header.put("REMOTE_ADDR", ip);
+        return header;
     }
 }
