@@ -372,8 +372,8 @@ public class Pares {
             for (int i = 0; i < numPages; i++) {
                 PDFTextStripper stripper = new PDFTextStripper();
                 stripper.setSortByPosition(true);// 排序
-                stripper.setStartPage(i + 1);//要解析的首页
-                stripper.setEndPage(i + 2);//要解析的结束页数
+                stripper.setStartPage(i);//要解析的首页
+                stripper.setEndPage(i + 1);//要解析的结束页数
                 stripper.setWordSeparator(" ");//单元格内容的分隔符号
                 stripper.setLineSeparator("\n");//行与行之间的分隔符号
                 String text = stripper.getText(pdfDoc);
