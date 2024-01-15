@@ -211,7 +211,7 @@ public class Pares {
     public static List<Map<String, Object>> customizeData() {
         logger.info("begin update customizeData");
         List<Map<String, Object>> r = new ArrayList<>();
-        CountDownLatch countDownLatch = new CountDownLatch(4);
+        CountDownLatch countDownLatch = new CountDownLatch(5);
         Thread formThread = new Thread(() -> {
             if (!setForum(r)) {
                 logger.error("Failed to add forum data");
@@ -240,10 +240,18 @@ public class Pares {
             logger.info("setGiteeData success");
             countDownLatch.countDown();
         });
+        Thread packageThread = new Thread(() -> {
+            if (!setPackageManagementData(r)) {
+                logger.error("Failed to add setPackageManagementData data");
+            }
+            logger.info("setPackageManagementData success");
+            countDownLatch.countDown();
+        });
         formThread.start();
         serviceThread.start();
         whitepaperThread.start();
         giteeDataThread.start();
+        packageThread.start();
         try {
             countDownLatch.await();
         } catch (Exception e) {
