@@ -211,7 +211,7 @@ public class Pares {
     public static List<Map<String, Object>> customizeData() {
         logger.info("begin update customizeData");
         List<Map<String, Object>> r = new ArrayList<>();
-        CountDownLatch countDownLatch = new CountDownLatch(4);
+        CountDownLatch countDownLatch = new CountDownLatch(5);
         Thread formThread = new Thread(() -> {
             if (!setForum(r)) {
                 logger.error("Failed to add forum data");
@@ -240,10 +240,18 @@ public class Pares {
             logger.info("setGiteeData success");
             countDownLatch.countDown();
         });
+        Thread packageThread = new Thread(() -> {
+            if (!setPackageManagementData(r)) {
+                logger.error("Failed to add setPackageManagementData data");
+            }
+            logger.info("setPackageManagementData success");
+            countDownLatch.countDown();
+        });
         formThread.start();
         serviceThread.start();
         whitepaperThread.start();
         giteeDataThread.start();
+        packageThread.start();
         try {
             countDownLatch.await();
         } catch (Exception e) {
@@ -364,8 +372,8 @@ public class Pares {
             for (int i = 0; i < numPages; i++) {
                 PDFTextStripper stripper = new PDFTextStripper();
                 stripper.setSortByPosition(true);// 排序
-                stripper.setStartPage(i + 1);//要解析的首页
-                stripper.setEndPage(i + 2);//要解析的结束页数
+                stripper.setStartPage(i+1);//要解析的首页
+                stripper.setEndPage(i + 1);//要解析的结束页数
                 stripper.setWordSeparator(" ");//单元格内容的分隔符号
                 stripper.setLineSeparator("\n");//行与行之间的分隔符号
                 String text = stripper.getText(pdfDoc);
