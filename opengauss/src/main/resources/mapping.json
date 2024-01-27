@@ -51,6 +51,36 @@
       "analyzer": "ik_max_word",
       "search_analyzer": "ik_smart"
     },
+    "h1": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "h2": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "h3": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "h4": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "h5": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "strong": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
     "type": {
       "type" : "text",
       "fields" : {
