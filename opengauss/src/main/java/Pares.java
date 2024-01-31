@@ -121,6 +121,20 @@ public class Pares {
         }
         jsonMap.put("textContent", node.text());
 
+        Elements h1 = node.getElementsByTag("h1");
+        Elements h2 = node.getElementsByTag("h2");
+        Elements h3 = node.getElementsByTag("h3");
+        Elements h4 = node.getElementsByTag("h4");
+        Elements h5 = node.getElementsByTag("h5");
+        Elements strong = node.getElementsByTag("strong");
+
+        jsonMap.put("h1", h1.text());
+        jsonMap.put("h2", h2.text());
+        jsonMap.put("h3", h3.text());
+        jsonMap.put("h4", h4.text());
+        jsonMap.put("h5", h5.text());
+        jsonMap.put("strong", strong.text());
+
         String version = path.replaceFirst(jsonMap.get("lang") + "/" + type + "/", "");
         version = version.substring(0, version.indexOf("/"));
         //gauss master分支需要显示为latest
@@ -148,6 +162,20 @@ public class Pares {
         Node document = parser.parse(fileContent);
         Document node = Jsoup.parse(renderer.render(document));
         jsonMap.put("textContent", node.text());
+
+        Elements h1 = node.getElementsByTag("h1");
+        Elements h2 = node.getElementsByTag("h2");
+        Elements h3 = node.getElementsByTag("h3");
+        Elements h4 = node.getElementsByTag("h4");
+        Elements h5 = node.getElementsByTag("h5");
+        Elements strong = node.getElementsByTag("strong");
+
+        jsonMap.put("h1", h1.text());
+        jsonMap.put("h2", h2.text());
+        jsonMap.put("h3", h3.text());
+        jsonMap.put("h4", h4.text());
+        jsonMap.put("h5", h5.text());
+        jsonMap.put("strong", strong.text());
 
         Yaml yaml = new Yaml();
         Map<String, Object> ret = yaml.load(r);
