@@ -1,0 +1,13 @@
+host:
+  -
+port:
+protocol:
+username:
+password:
+useCer:
+cerFilePath:
+cerPassword:
+
+mysqlUrl:
+mysqlUsername:
+mysqlPassword:

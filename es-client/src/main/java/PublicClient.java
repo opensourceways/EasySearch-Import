@@ -44,7 +44,7 @@ public class PublicClient {
         }
 
         if (yamlConfig.isUseCer()) {
-            EsClientCer.create(
+            restHighLevelClient = EsClientCer.create(
                     yamlConfig.getHost(),
                     yamlConfig.getPort(),
                     yamlConfig.getProtocol(),
@@ -57,7 +57,7 @@ public class PublicClient {
                     yamlConfig.getCerPassword()
             );
         } else {
-            EsClient.create(
+            restHighLevelClient = EsClient.create(
                     yamlConfig.getHost(),
                     yamlConfig.getPort(),
                     yamlConfig.getProtocol(),

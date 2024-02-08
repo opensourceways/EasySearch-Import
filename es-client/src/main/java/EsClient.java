@@ -27,12 +27,13 @@ import java.util.Objects;
 
 public class EsClient {
 
-    private static final Logger logger = LogManager.getLogger(EsClientCer.class);
+    private static final Logger logger = LogManager.getLogger(EsClient.class);
 
     /**
      * 创建客户端的类，定义create函数用于创建客户端。
      */
-    public static void create(List<String> host, int port, String protocol, int connectTimeout, int connectionRequestTimeout, int socketTimeout, String username, String password) throws IOException {
+    public static RestHighLevelClient create(List<String> host, int port, String protocol, int connectTimeout, int connectionRequestTimeout, int socketTimeout, String username, String password) throws IOException {
+//        return new RestHighLevelClient(RestClient.builder(new HttpHost("192.168.1.203", 9200, "http")));
         final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
         SSLContext sc = null;
@@ -59,7 +60,7 @@ public class EsClient {
         ClusterHealthResponse response = client.cluster().health(request, RequestOptions.DEFAULT);
         logger.info("es rest client health response {} ", response);
 
-        PublicClient.restHighLevelClient = client;
+        return client;
     }
 
 
