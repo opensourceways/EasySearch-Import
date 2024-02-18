@@ -1,26 +1,33 @@
-FROM openeuler/openeuler:22.03 as BUILDER
+FROM gplane/pnpm as Builder
 ENV LANG="C.UTF-8"
-RUN cd / \
-    && yum install -y wget \
-    && wget https://mirrors.tuna.tsinghua.edu.cn/Adoptium/17/jdk/x64/linux/OpenJDK17U-jdk_x64_linux_hotspot_17.0.10_7.tar.gz \
-    && tar -zxvf OpenJDK17U-jdk_x64_linux_hotspot_17.0.10_7.tar.gz \
+
+ARG COMMUNITY=openeuler
+
+WORKDIR /
+
+RUN apt update \
+    && wget https://download.oracle.com/java/17/archive/jdk-17.0.7_linux-x64_bin.tar.gz \
+    && tar -zxvf jdk-17.0.7_linux-x64_bin.tar.gz \
     && wget https://repo.huaweicloud.com/apache/maven/maven-3/3.8.1/binaries/apache-maven-3.8.1-bin.tar.gz \
     && tar -zxvf apache-maven-3.8.1-bin.tar.gz \
-    && yum install -y git
+    && npm i pnpm -g
 
-COPY . /search-help
-
-ENV JAVA_HOME=/jdk-17.0.10+7
+ENV JAVA_HOME=/jdk-17.0.7
 ENV PATH=${JAVA_HOME}/bin:$PATH
 
 ENV MAVEN_HOME=/apache-maven-3.8.1
 ENV PATH=${MAVEN_HOME}/bin:$PATH
 
-RUN cd /search-help \
+COPY . /EaseSearch-Import/search-help
+
+RUN cd /EaseSearch-Import/search-help \
     && mvn clean install package -Dmaven.test.skip
 
-FROM openeuler/openeuler:22.03
+RUN cp -r /jdk-17.0.7 /jre
+
+FROM openeuler/openeuler:23.03
 ENV LANG="C.UTF-8"
+
 RUN yum update -y \
     && yum install -y shadow
 
@@ -30,7 +37,8 @@ RUN groupadd -g 1001 easysearch \
 ENV WORKSPACE=/home/easysearch
 WORKDIR ${WORKSPACE}
 
-COPY --chown=easysearch --from=Builder /search-help/target ${WORKSPACE}/target
+COPY --chown=easysearch --from=Builder /EaseSearch-Import/search-help/target ${WORKSPACE}/target
+COPY --chown=easysearch --from=Builder /jre ${WORKSPACE}/jre
 
 ENV JAVA_HOME=${WORKSPACE}/jre
 ENV PATH=${JAVA_HOME}/bin:$PATH

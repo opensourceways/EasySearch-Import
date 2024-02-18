@@ -30,7 +30,7 @@ RUN cd /EaseSearch-Import/import-task/target/classes \
     && chmod +x initDoc.sh \
     && ./initDoc.sh
 
-RUN cp -r jdk-17.0.7 jre
+RUN cp -r /jdk-17.0.7 /jre
 
 
 FROM openeuler/openeuler:23.03

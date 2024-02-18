@@ -20,7 +20,10 @@ import org.elasticsearch.xcontent.XContentType;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
@@ -43,6 +46,10 @@ public class PublicClient {
             }
         }
 
+        CreateClientFormConfigByConfig(yamlConfig);
+    }
+
+    public static void CreateClientFormConfigByConfig(YamlConfig yamlConfig) throws Exception {
         if (yamlConfig.isUseCer()) {
             restHighLevelClient = EsClientCer.create(
                     yamlConfig.getHost(),
@@ -71,9 +78,6 @@ public class PublicClient {
     }
 
 
-
-
-
     public static void makeIndex(String index, String mappingPath) throws IOException {
         GetIndexRequest request = new GetIndexRequest(index);
         request.local(false);
@@ -85,10 +89,12 @@ public class PublicClient {
         }
 
         CreateIndexRequest request1 = new CreateIndexRequest(index);
-        File mappingJson = FileUtils.getFile(mappingPath);
-        String mapping = FileUtils.readFileToString(mappingJson, StandardCharsets.UTF_8);
+        if (!mappingPath.isBlank()) {
+            File mappingJson = FileUtils.getFile(mappingPath);
+            String mapping = FileUtils.readFileToString(mappingJson, StandardCharsets.UTF_8);
+            request1.mapping(mapping, XContentType.JSON);
+        }
 
-        request1.mapping(mapping, XContentType.JSON);
         request1.setTimeout(TimeValue.timeValueMillis(1));
 
         restHighLevelClient.indices().create(request1, RequestOptions.DEFAULT);
@@ -101,7 +107,6 @@ public class PublicClient {
 
     public static void deleteExpired(Set<String> idSet, String index) {
         try {
-            long st = System.currentTimeMillis();
             int scrollSize = 500;//一次读取的doc数量
             SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
             searchSourceBuilder.query(QueryBuilders.matchAllQuery());//读取全量数据

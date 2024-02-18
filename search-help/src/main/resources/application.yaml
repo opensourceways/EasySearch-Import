@@ -1,3 +1,13 @@
+hostNDCG:
+  -
+portNDCG:
+protocolNDCG:
+usernameNDCG:
+passwordNDCG:
+useCerNDCG:
+cerFilePathNDCG:
+cerPasswordNDCG:
+
 host:
   -
 port:
@@ -7,7 +17,3 @@ password:
 useCer:
 cerFilePath:
 cerPassword:
-
-mysqlUrl:
-mysqlUsername:
-mysqlPassword:

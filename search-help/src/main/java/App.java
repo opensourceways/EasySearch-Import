@@ -1,7 +1,10 @@
+import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.indices.CreateIndexRequest;
+import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
@@ -12,21 +15,23 @@ import org.yaml.snakeyaml.constructor.Constructor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 
 public class App {
     private static final String APPLICATION_PATH = System.getenv("APPLICATION_PATH");
 
-    private static final String ES_INDEX = System.getenv("ES_INDEX");
+    private static final String NDCG_ES_INDEX = System.getenv("NDCG_ES_INDEX");
+
+    private static final String SEARCH_WORD_INDEX = System.getenv("SEARCH_WORD_INDEX");
+
+    public static RestHighLevelClient restHighLevelClientNDCG;
 
     public static RestHighLevelClient restHighLevelClient;
 
     public static YamlConfig yamlConfig;
+
 
     public static void main(String[] args) {
         String configPath = APPLICATION_PATH;
@@ -41,6 +46,32 @@ public class App {
                 } else {
                     System.out.println("Failed to delete the file");
                 }
+            }
+
+            if (yamlConfig.isUseCer()) {
+                restHighLevelClientNDCG = EsClientCer.create(
+                        yamlConfig.getHostNDCG(),
+                        yamlConfig.getPortNDCG(),
+                        yamlConfig.getProtocolNDCG(),
+                        5 * 1000,
+                        5 * 1000,
+                        30 * 1000,
+                        yamlConfig.getUsernameNDCG(),
+                        yamlConfig.getPasswordNDCG(),
+                        yamlConfig.getCerFilePathNDCG(),
+                        yamlConfig.getCerPasswordNDCG()
+                );
+            } else {
+                restHighLevelClientNDCG = EsClient.create(
+                        yamlConfig.getHostNDCG(),
+                        yamlConfig.getPortNDCG(),
+                        yamlConfig.getProtocolNDCG(),
+                        5 * 1000,
+                        5 * 1000,
+                        30 * 1000,
+                        yamlConfig.getUsernameNDCG(),
+                        yamlConfig.getPasswordNDCG()
+                );
             }
 
             if (yamlConfig.isUseCer()) {
@@ -69,6 +100,17 @@ public class App {
                 );
             }
 
+            GetIndexRequest request = new GetIndexRequest(SEARCH_WORD_INDEX);
+            request.local(false);
+            request.humanReadable(true);
+            request.includeDefaults(false);
+            boolean exists = restHighLevelClient.indices().exists(request, RequestOptions.DEFAULT);
+            if (exists) {
+                return;
+            }
+            CreateIndexRequest request1 = new CreateIndexRequest(SEARCH_WORD_INDEX);
+            restHighLevelClient.indices().create(request1, RequestOptions.DEFAULT);
+
             importSearchKey();
         } catch (Exception e) {
             e.printStackTrace();
@@ -77,14 +119,14 @@ public class App {
 
     public static void importSearchKey() throws Exception {
 
-        SearchRequest request = new SearchRequest(ES_INDEX);
+        SearchRequest request = new SearchRequest(NDCG_ES_INDEX);
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
 
         sourceBuilder.aggregation(AggregationBuilders.terms("data").field("search_key.keyword").size(100000));
         request.source(sourceBuilder);
 
 
-        SearchResponse response = restHighLevelClient.search(request, RequestOptions.DEFAULT);
+        SearchResponse response = restHighLevelClientNDCG.search(request, RequestOptions.DEFAULT);
 
         ParsedTerms aggregation = response.getAggregations().get("data");
 
@@ -93,44 +135,27 @@ public class App {
         String validCharsRegex = "\\A[\\p{IsHan}\\p{Alnum}\\p{Punct}\\s]*\\z";
 
 
-        String url = yamlConfig.getMysqlUrl();
-        String username = yamlConfig.getUsername();
-        String password = yamlConfig.getPassword();
-        Connection connection = DriverManager.getConnection(url, username, password);
-
-        int d = 0;
         for (Terms.Bucket bucket : buckets) {
             if (bucket.getKeyAsString().matches(validCharsRegex)) {
                 String searchWord = bucket.getKeyAsString();
                 long searchCount = bucket.getDocCount();
-                String checkSql = "SELECT id FROM search_key_count WHERE search_word = ?";
-                try (PreparedStatement checkStmt = connection.prepareStatement(checkSql)) {
-                    checkStmt.setString(1, searchWord);
-                    ResultSet resultSet = checkStmt.executeQuery();
 
-                    if (resultSet.next()) {
-                        String updateSql = "UPDATE search_key_count SET search_count = ? WHERE search_word = ?";
-                        try (PreparedStatement updateStmt = connection.prepareStatement(updateSql)) {
-                            d++;
-                            System.out.println(d);
-                            System.out.println(searchWord + " - " + searchCount);
-                            updateStmt.setLong(1, searchCount);
-                            updateStmt.setString(2, searchWord);
-                            updateStmt.executeUpdate();
-                        }
-                    } else {
-                        // 如果不存在，插入新记录
-                        String insertSql = "INSERT INTO search_key_count (id, search_word, search_count) VALUES (?, ?, ?)";
-                        try (PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
-                            insertStmt.setString(1, UUID.randomUUID().toString().replace("-", ""));
-                            insertStmt.setString(2, searchWord);
-                            insertStmt.setLong(3, searchCount);
-                            insertStmt.executeUpdate();
-                        }
-                    }
+                Map<String, Object> data = new HashMap<>();
+                data.put("path", searchWord);
+                data.put("searchWord", searchWord);
+                data.put("searchCount", searchCount);
+                try {
+                    IndexRequest indexRequest = new IndexRequest(SEARCH_WORD_INDEX).id((String) data.get("path")).source(data);
+                    restHighLevelClient.index(indexRequest, RequestOptions.DEFAULT);
+                } catch (Exception e) {
+                    System.out.println(searchWord + " -- " + searchCount + "not insert");
                 }
             }
         }
         System.out.println("over");
     }
+
+
+
+
 }
