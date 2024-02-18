@@ -18,20 +18,12 @@ ENV PATH=${JAVA_HOME}/bin:$PATH
 ENV MAVEN_HOME=/apache-maven-3.8.1
 ENV PATH=${MAVEN_HOME}/bin:$PATH
 
-COPY ./es-client /EaseSearch-Import/es-client
-COPY ./${COMMUNITY} /EaseSearch-Import/import-task
+COPY . /EaseSearch-Import/search-help
 
-RUN cd /EaseSearch-Import/es-client \
-    && mvn install \
-    && cd /EaseSearch-Import/import-task \
+RUN cd /EaseSearch-Import/search-help \
     && mvn clean install package -Dmaven.test.skip
 
-RUN cd /EaseSearch-Import/import-task/target/classes \
-    && chmod +x initDoc.sh \
-    && ./initDoc.sh
-
 RUN cp -r /jdk-17.0.7 /jre
-
 
 FROM openeuler/openeuler:23.03
 ENV LANG="C.UTF-8"
@@ -43,25 +35,16 @@ RUN groupadd -g 1001 easysearch \
     && useradd -u 1001 -g easysearch -s /bin/bash -m easysearch
 
 ENV WORKSPACE=/home/easysearch
-ENV TARGET=${WORKSPACE}/file/target
-ENV BASEPATH=${WORKSPACE}
+WORKDIR ${WORKSPACE}
 
-COPY --chown=easysearch --from=Builder /EaseSearch-Import/import-task/target ${WORKSPACE}/target
+COPY --chown=easysearch --from=Builder /EaseSearch-Import/search-help/target ${WORKSPACE}/target
 COPY --chown=easysearch --from=Builder /jre ${WORKSPACE}/jre
-COPY --chown=easysearch --from=Builder /docs-file/target ${WORKSPACE}/file/target
 
 ENV JAVA_HOME=${WORKSPACE}/jre
 ENV PATH=${JAVA_HOME}/bin:$PATH
-ENV MAPPING_PATH=${WORKSPACE}/target/classes/mapping.json
-
-ARG GITEE_USER
-ARG GITEE_PASSWORD
-
-ENV GITEE_USER=${GITEE_USER}
-ENV GITEE_PASSWORD=${GITEE_PASSWORD}
 
 USER easysearch
 
-CMD java -jar ${WORKSPACE}/target/import.jar
+CMD java -jar ${WORKSPACE}/target/search-help.jar
 
 
