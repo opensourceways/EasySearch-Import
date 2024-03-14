@@ -1,0 +1,19 @@
+hostNDCG:
+  -
+portNDCG:
+protocolNDCG:
+usernameNDCG:
+passwordNDCG:
+useCerNDCG:
+cerFilePathNDCG:
+cerPasswordNDCG:
+
+host:
+  -
+port:
+protocol:
+username:
+password:
+useCer:
+cerFilePath:
+cerPassword:
