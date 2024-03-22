@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class Pares {
+public class Parse {
 
     private static final String BASEPATH = System.getenv("TARGET") + "/";
     private static final String LANG_EN = "/en/";

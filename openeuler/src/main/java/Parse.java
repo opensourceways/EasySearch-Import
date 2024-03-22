@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Pares {
+public class Parse {
     public static final String BASEPATH = System.getenv("TARGET") + "/";
     public static final String BLOG = "blog";
     public static final String BLOGS = "blogs";
@@ -51,7 +51,7 @@ public class Pares {
     private static final String PACKAGES_SRC = System.getenv("PACKAGES_SRC");
     private static final String PACKAGES_SRC_DETAIL = System.getenv("PACKAGES_SRC_DETAIL");
     private static final String PACKAGES_SRC_DOC = System.getenv("PACKAGES_SRC_DOC");
-    private static final Logger logger = LoggerFactory.getLogger(Pares.class);
+    private static final Logger logger = LoggerFactory.getLogger(Parse.class);
 
     public static Map<String, Object> parse(File file) throws Exception {
         String originalPath = file.getPath();
