@@ -112,8 +112,14 @@ public class App {
             restHighLevelClient.indices().create(request1, RequestOptions.DEFAULT);
 
             importSearchKey();
+
+            System.out.println("import end");
+            System.exit(0);
         } catch (Exception e) {
             e.printStackTrace();
+
+            System.out.println("import error");
+            System.exit(0);
         }
     }
 
