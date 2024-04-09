@@ -37,14 +37,6 @@ public class PublicClient {
         InputStream inputStream = new FileInputStream(configPath);
 
         YamlConfig yamlConfig = yaml.load(inputStream);
-        File configFile = new File(configPath);
-        if (configFile.exists()) {
-            if (configFile.delete()) {
-                System.out.println("File deleted successfully");
-            } else {
-                System.out.println("Failed to delete the file");
-            }
-        }
 
         CreateClientFormConfigByConfig(yamlConfig);
     }
