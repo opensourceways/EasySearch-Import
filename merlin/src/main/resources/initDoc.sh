@@ -23,4 +23,3 @@ fi
 
 mkdir -p ${TARGET}/docs
 cp -r ${SOURCE}/docs/docs/zh ${TARGET}/docs/
-cp -r ${SOURCE}/docs/docs/en ${TARGET}/docs/
