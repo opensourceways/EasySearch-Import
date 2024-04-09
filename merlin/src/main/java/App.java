@@ -32,22 +32,19 @@ public class App {
             logger.error(e.toString());
         }
 
-        System.out.println("import end");
+        logger.info("import end");
         System.exit(0);
     }
-
-
-
 
 
     public static void fileDate() {
         File indexFile = new File(TARGET);
         if (!indexFile.exists()) {
-            System.out.printf("%s folder does not exist%n", indexFile.getPath());
+            logger.error("folder does not exist: ", indexFile.getPath());
             return;
         }
 
-        System.out.println("begin to update document");
+        logger.info("begin to update document");
 
         Set<String> idSet = new HashSet<>();
 
@@ -64,13 +61,12 @@ public class App {
                         System.out.println("parse null : " + paresFile.getPath());
                     }
                 } catch (Exception e) {
-                    System.out.println(paresFile.getPath());
-                    System.out.println(e.getMessage());
+                    logger.info(paresFile.getPath());
+                    logger.info(e.getMessage());
                 }
             }
         }
-
-        System.out.println("start delete expired document");
+        logger.info("start delete expired document");
         PublicClient.deleteExpired(idSet, INDEX_PREFIX + "_*");
 
     }

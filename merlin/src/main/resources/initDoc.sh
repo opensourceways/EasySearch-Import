@@ -14,12 +14,13 @@ rm inner_search.md
 rm search.md
 
 mkdir -p ${SOURCE}
-mkdir -p ${TARGET}/zh/
-mkdir -p ${TARGET}/en/
+mkdir -p ${TARGET}
 
 if [ ! -d "${SOURCE}/docs" ]; then
  rm -rf ${TARGET}
  exit
 fi
 
-cp -r ${SOURCE}/docs/docs ${TARGET}/zh/
+mkdir -p ${TARGET}/docs
+cp -r ${SOURCE}/docs/docs/zh ${TARGET}/docs/
+cp -r ${SOURCE}/docs/docs/en ${TARGET}/docs/

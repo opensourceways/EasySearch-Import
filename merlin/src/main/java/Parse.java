@@ -32,9 +32,9 @@ public class Parse {
             .replace(".md", "")
             .replace(".html", "");
 
-        String lang = path.substring(0, path.indexOf("/"));
+        String type = path.substring(0, path.indexOf("/"));
 
-        String type = path.substring(lang.length() + 1, path.indexOf("/", lang.length() + 1));
+        String lang = path.substring(type.length() + 1, path.indexOf("/", type.length() + 1));
 
         Map<String, Object> jsonMap = new HashMap<>();
         jsonMap.put("lang", lang);
