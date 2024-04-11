@@ -59,14 +59,6 @@ public class Parse {
 
 
     public static void parseDocsType(Map<String, Object> jsonMap, String fileContent, String fileName) {
-        String r = "";
-        if (fileContent.contains("---")) {
-            fileContent = fileContent.substring(fileContent.indexOf("---") + 3);
-            if (fileContent.contains("---")) {
-                r = fileContent.substring(0, fileContent.indexOf("---"));
-                fileContent = fileContent.substring(fileContent.indexOf("---") + 3);
-            }
-        }
 
         Parser parser = Parser.builder().build();
         HtmlRenderer renderer = HtmlRenderer.builder().build();
@@ -95,49 +87,6 @@ public class Parse {
         jsonMap.put("h5", h5.text());
         jsonMap.put("strong", strong.text());
 
-        Yaml yaml = new Yaml();
-        Map<String, Object> ret = yaml.load(r);
-        String key = "";
-        Object value = "";
-
-        for (Map.Entry<String, Object> entry : ret.entrySet()) {
-            key = entry.getKey().toLowerCase(Locale.ROOT);
-            value = entry.getValue();
-            if (key.equals("date")) {
-                //需要处理日期不标准导致的存入ES失败的问题。
-                String dateString = "";
-                if (value.getClass().getSimpleName().equals("Date")) {
-                    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
-                    dateString = format.format(value);
-                } else {
-                    dateString = value.toString();
-                }
-                Pattern pattern = Pattern.compile("\\D"); //匹配所有非数字
-                Matcher matcher = pattern.matcher(dateString);
-                dateString = matcher.replaceAll("-");
-                if (dateString.length() < 10) {
-                    StringBuilder stringBuilder = new StringBuilder(dateString);
-                    if (stringBuilder.charAt(7) != '-') {
-                        stringBuilder.insert(5, "0");
-                    }
-                    if (stringBuilder.length() < 10) {
-                        stringBuilder.insert(8, "0");
-                    }
-                    dateString = stringBuilder.toString();
-                }
-                value = dateString;
-            }
-            if (key.equals("author") && value instanceof String) {
-                value = new String[]{value.toString()};
-            }
-            if (key.equals("head")) {
-                continue;
-            }
-            if (key.equals("title")) {
-                key = "specify";
-            }
-            jsonMap.put(key, value);
-        }
         if (jsonMap.containsKey("date")) {
             jsonMap.put("archives", jsonMap.get("date").toString().substring(0, 7));
         }
