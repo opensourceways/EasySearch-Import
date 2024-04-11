@@ -3,6 +3,10 @@ ENV LANG="C.UTF-8"
 
 ARG COMMUNITY=openeuler
 
+ARG TOKEN
+
+ENV TOKEN=${TOKEN}
+
 WORKDIR /
 
 RUN apt update \
@@ -53,12 +57,6 @@ COPY --chown=easysearch --from=Builder /docs-file/target ${WORKSPACE}/file/targe
 ENV JAVA_HOME=${WORKSPACE}/jre
 ENV PATH=${JAVA_HOME}/bin:$PATH
 ENV MAPPING_PATH=${WORKSPACE}/target/classes/mapping.json
-
-ARG GITEE_USER
-ARG GITEE_PASSWORD
-
-ENV GITEE_USER=${GITEE_USER}
-ENV GITEE_PASSWORD=${GITEE_PASSWORD}
 
 USER easysearch
 

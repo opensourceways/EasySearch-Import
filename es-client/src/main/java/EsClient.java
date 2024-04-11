@@ -33,7 +33,6 @@ public class EsClient {
      * 创建客户端的类，定义create函数用于创建客户端。
      */
     public static RestHighLevelClient create(List<String> host, int port, String protocol, int connectTimeout, int connectionRequestTimeout, int socketTimeout, String username, String password) throws IOException {
-//        return new RestHighLevelClient(RestClient.builder(new HttpHost("192.168.1.203", 9200, "http")));
         final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
         SSLContext sc = null;

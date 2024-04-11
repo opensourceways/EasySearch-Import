@@ -17,10 +17,18 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Pares {
+public class Parse {
 
     public static final String BASEPATH = System.getenv("TARGET") + "/";
+    public static final String BLOG = "blog";
+    public static final String BLOGS = "blogs";
     public static final String DOCS = "docs";
+    public static final String NEWS = "news";
+    public static final String OTHER = "other";
+    public static final String MIGRATION = "migration";
+    public static final String SHOWCASE = "showcase";
+    public static final String EVENTS = "events";
+    public static final String USERPRACTICE = "userPractice";
 
 
     public static Map<String, Object> parse(File file) throws Exception {
@@ -36,7 +44,25 @@ public class Pares {
         String lang = path.substring(0, path.indexOf("/"));
 
         String type = path.substring(lang.length() + 1, path.indexOf("/", lang.length() + 1));
-
+        if (!DOCS.equals(type)
+                && !BLOG.equals(type)
+                && !BLOGS.equals(type)
+                && !NEWS.equals(type)
+                && !SHOWCASE.equals(type)
+                && !MIGRATION.equals(type)
+                && !EVENTS.equals(type)
+                && !USERPRACTICE.equals(type)) {
+            type = OTHER;
+            if (!fileName.equals("index.html")) {
+                return null;
+            }
+        }
+        if (type.equals(USERPRACTICE)) {
+            type = SHOWCASE;
+        }
+        if (type.equals(OTHER) || type.equals(SHOWCASE)) {
+            path = path.substring(0, path.length() - 5);
+        }
         Map<String, Object> jsonMap = new HashMap<>();
         jsonMap.put("lang", lang);
         jsonMap.put("type", type);
@@ -58,9 +84,7 @@ public class Pares {
         if (jsonMap.get("title") == "" && jsonMap.get("textContent") == "") {
             return null;
         }
-
         return jsonMap;
-
     }
 
     public static void parseHtml(Map<String, Object> jsonMap, String fileContent) {
@@ -77,8 +101,7 @@ public class Pares {
         }
     }
 
-    public static void parseDocsType(Map<String, Object> jsonMap, String fileContent, String fileName, String path,
-                                     String type) {
+    public static void parseDocsType(Map<String, Object> jsonMap, String fileContent, String fileName, String path, String type) {
         Parser parser = Parser.builder().build();
         HtmlRenderer renderer = HtmlRenderer.builder().build();
         Node document = parser.parse(fileContent);
@@ -98,8 +121,28 @@ public class Pares {
         }
         jsonMap.put("textContent", node.text());
 
+        Elements h1 = node.getElementsByTag("h1");
+        Elements h2 = node.getElementsByTag("h2");
+        Elements h3 = node.getElementsByTag("h3");
+        Elements h4 = node.getElementsByTag("h4");
+        Elements h5 = node.getElementsByTag("h5");
+        Elements strong = node.getElementsByTag("strong");
+
+        jsonMap.put("h1", h1.text());
+        jsonMap.put("h2", h2.text());
+        jsonMap.put("h3", h3.text());
+        jsonMap.put("h4", h4.text());
+        jsonMap.put("h5", h5.text());
+        jsonMap.put("strong", strong.text());
+
         String version = path.replaceFirst(jsonMap.get("lang") + "/" + type + "/", "");
-        version = "no version";
+        version = version.substring(0, version.indexOf("/"));
+        //gauss master分支需要显示为latest
+        if (version.equals("master") || version.equals("master-lite")) {
+            String p = (String) jsonMap.get("path");
+            jsonMap.put("path", p.replaceAll("/master/", "/latest/").replaceAll("/master-lite/", "/latest-lite/"));
+            version = version.replaceAll("master", "latest");
+        }
         jsonMap.put("version", version);
     }
 
@@ -115,9 +158,24 @@ public class Pares {
             }
         }
 
+
         Node document = parser.parse(fileContent);
         Document node = Jsoup.parse(renderer.render(document));
         jsonMap.put("textContent", node.text());
+
+        Elements h1 = node.getElementsByTag("h1");
+        Elements h2 = node.getElementsByTag("h2");
+        Elements h3 = node.getElementsByTag("h3");
+        Elements h4 = node.getElementsByTag("h4");
+        Elements h5 = node.getElementsByTag("h5");
+        Elements strong = node.getElementsByTag("strong");
+
+        jsonMap.put("h1", h1.text());
+        jsonMap.put("h2", h2.text());
+        jsonMap.put("h3", h3.text());
+        jsonMap.put("h4", h4.text());
+        jsonMap.put("h5", h5.text());
+        jsonMap.put("strong", strong.text());
 
         Yaml yaml = new Yaml();
         Map<String, Object> ret = yaml.load(r);
@@ -127,7 +185,7 @@ public class Pares {
             key = entry.getKey().toLowerCase(Locale.ROOT);
             value = entry.getValue();
             if (key.equals("date")) {
-                // 需要处理日期不标准导致的存入ES失败的问题。
+                //需要处理日期不标准导致的存入ES失败的问题。
                 String dateString = "";
                 if (value.getClass().getSimpleName().equals("Date")) {
                     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd");
@@ -135,7 +193,7 @@ public class Pares {
                 } else {
                     dateString = value.toString();
                 }
-                Pattern pattern = Pattern.compile("\\D"); // 匹配所有非数字
+                Pattern pattern = Pattern.compile("\\D"); //匹配所有非数字
                 Matcher matcher = pattern.matcher(dateString);
                 dateString = matcher.replaceAll("-");
                 if (dateString.length() < 10) {
@@ -151,7 +209,7 @@ public class Pares {
                 value = dateString;
             }
             if (key.equals("author") && value instanceof String) {
-                value = new String[] { value.toString() };
+                value = new String[]{value.toString()};
             }
             if (key.equals("head")) {
                 continue;
@@ -161,5 +219,7 @@ public class Pares {
         if (jsonMap.containsKey("date")) {
             jsonMap.put("archives", jsonMap.get("date").toString().substring(0, 7));
         }
+
     }
+
 }
