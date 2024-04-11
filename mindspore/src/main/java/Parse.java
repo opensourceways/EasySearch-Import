@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class Pares {
+public class Parse {
 
     private static final String BASEPATH = System.getenv("TARGET") + "/";
     private static final String LANG_EN = "/en/";
@@ -150,6 +150,20 @@ public class Pares {
 
         jsonMap.put("title", title);
         jsonMap.put("textContent", textContent);
+
+        Elements h1 = node.getElementsByTag("h1");
+        Elements h2 = node.getElementsByTag("h2");
+        Elements h3 = node.getElementsByTag("h3");
+        Elements h4 = node.getElementsByTag("h4");
+        Elements h5 = node.getElementsByTag("h5");
+        Elements strong = node.getElementsByTag("strong");
+
+        jsonMap.put("h1", h1.text());
+        jsonMap.put("h2", h2.text());
+        jsonMap.put("h3", h3.text());
+        jsonMap.put("h4", h4.text());
+        jsonMap.put("h5", h5.text());
+        jsonMap.put("strong", strong.text());
         return true;
     }
 
@@ -183,6 +197,20 @@ public class Pares {
         jsonMap.put("title", title);
         jsonMap.put("textContent", textContent);
         jsonMap.put("path", "install/detail?path=" + path);
+
+        Elements h1 = node.getElementsByTag("h1");
+        Elements h2 = node.getElementsByTag("h2");
+        Elements h3 = node.getElementsByTag("h3");
+        Elements h4 = node.getElementsByTag("h4");
+        Elements h5 = node.getElementsByTag("h5");
+        Elements strong = node.getElementsByTag("strong");
+
+        jsonMap.put("h1", h1.text());
+        jsonMap.put("h2", h2.text());
+        jsonMap.put("h3", h3.text());
+        jsonMap.put("h4", h4.text());
+        jsonMap.put("h5", h5.text());
+        jsonMap.put("strong", strong.text());
         return true;
     }
 
@@ -281,6 +309,20 @@ public class Pares {
                     jsonMap.put("subclass", type);
                     jsonMap.put("type", "information");
                     jsonMap.put("path", "news/newschildren?id=" + id);
+
+                    Elements h1 = node.getElementsByTag("h1");
+                    Elements h2 = node.getElementsByTag("h2");
+                    Elements h3 = node.getElementsByTag("h3");
+                    Elements h4 = node.getElementsByTag("h4");
+                    Elements h5 = node.getElementsByTag("h5");
+                    Elements strong = node.getElementsByTag("strong");
+            
+                    jsonMap.put("h1", h1.text());
+                    jsonMap.put("h2", h2.text());
+                    jsonMap.put("h3", h3.text());
+                    jsonMap.put("h4", h4.text());
+                    jsonMap.put("h5", h5.text());
+                    jsonMap.put("strong", strong.text());
                     r.add(jsonMap);
                 } else {
                     System.out.println(path + " - " + connection.getResponseCode());

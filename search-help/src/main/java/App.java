@@ -9,6 +9,8 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -31,6 +33,8 @@ public class App {
     public static RestHighLevelClient restHighLevelClient;
 
     public static YamlConfig yamlConfig;
+
+      private static final Logger logger = LoggerFactory.getLogger(App.class);
 
 
     public static void main(String[] args) {
@@ -112,8 +116,13 @@ public class App {
             restHighLevelClient.indices().create(request1, RequestOptions.DEFAULT);
 
             importSearchKey();
+
+            logger.info("import end");
+            System.exit(0);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("import error !", e.getMessage());
+
+            System.exit(0);
         }
     }
 

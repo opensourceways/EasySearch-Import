@@ -44,7 +44,7 @@ public class App {
         for (File paresFile : listFiles) {
             if (!paresFile.getName().startsWith("_")) {
                 try {
-                    Map<String, Object> escape = Pares.parse(paresFile);
+                    Map<String, Object> escape = Parse.parse(paresFile);
                     if (null != escape) {
                         PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
                         idSet.add((String) escape.get("path"));
@@ -58,7 +58,7 @@ public class App {
             }
         }
 
-        List<Map<String, Object>> customizeEscape = Pares.customizeData();
+        List<Map<String, Object>> customizeEscape = Parse.customizeData();
         if (null == customizeEscape) {
             return;
         }
