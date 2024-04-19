@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.softwaremarket.collect.mapper.SoftwareMapper">
+
+    <select id="getRmpSoftwareInfo" resultType="com.softwaremarket.collect.dto.SoftwareRpmDto">
+       <!-- select id,
+        name,
+        version,
+        os,
+        arch,
+        src_repo as srcRepo,
+        summary ,
+        description ,
+        date_format(rpm_update_at,'%Y-%m-%d %H:%i:%S') as updatetime,
+        rpm_size as size,
+        bin_download_url as binDownloadUrl,
+        rpm_category as category
+        from rpm_pkg_base
+        limit #{start},#{pagesize}-->
+
+
+        select  DISTINCT
+        r.id,
+        r.name,
+        r.version,
+        r.os,
+        r.arch,
+        src_repo as srcRepo,
+        r.summary ,
+        r.description ,
+        date_format(r.rpm_update_at,'%Y-%m-%d %H:%i:%S') as updatetime,
+        r.rpm_size as size,
+        r.bin_download_url as binDownloadUrl,
+        r.category as category,
+        r.requires as requiresText,
+        r.installation as installation,
+        r.provides as providesText,
+        r.download_count as downloadCount,
+        r.pkg_id as pkgId,
+        os.origin_pkg as originPkg
+        from (SELECT * FROM  rpm_pkg_base limit  #{start},#{pagesize}) r
+        left JOIN
+        external_os os
+        ON r.`name`=os.target_pkg
+    </select>
+    <select id="getApplicationSoftwareInfo" resultType="com.softwaremarket.collect.dto.SoftwareAppDto">
+        SELECT
+        a.*,
+        CONCAT_WS(",",  if(ISNULL(a.name) ,NULL,"IMAGE"), if(ISNULL(a.rpm_name) ,NULL,"RPM"),if(ISNULL(a.epkg_name) ,NULL,"EPKG")) as tagsText
+        from (
+        select  app.id,
+        app.name,
+        app.app_ver as version,
+        app.os,
+        app.arch,
+        app.src_repo as srcRepo,
+        app.category as category,
+        app.icon_url as iconUrl,
+        app.description,
+        app.installation,
+        app.download_count as downloadCount,
+        app.pkg_id as pkgId,
+        app.pkg_id as IMAGE,
+        e.pkg_id as EPKG,
+        rpm.pkg_id as RPM,
+        e.epkg_update_at as epkgUpdate,
+        rpm.rpm_update_at as rpmUpdate,
+        e.name as  epkg_name,
+        rpm.name as rpm_name
+        from (SELECT * FROM application_package limit #{start},#{pagesize} ) app
+        LEFT JOIN
+        (SELECT * from	(SELECT distinct * FROM  epkg_pkg WHERE name in (SELECT name FROM application_package) ORDER BY epkg_update_at DESC ) as ekpg  GROUP BY ekpg.name )e ON app.name= e.name
+        LEFT JOIN
+        (SELECT * from	(SELECT distinct * FROM  rpm_pkg_base WHERE name in (SELECT name FROM application_package) ORDER BY rpm_update_at DESC ) as rpmkg  GROUP BY rpmkg.name) rpm ON app.name=rpm.name
+
+        ) a
+
+
+        <!-- SELECT DISTINCT
+         a.*,
+         CONCAT_WS(",",  if(ISNULL(a.name) ,NULL,"IMAGE"), if(ISNULL(a.rpm_name) ,NULL,"RPM"),if(ISNULL(a.epkg_name) ,NULL,"EPKG")) as tagsText  from (
+         select  app.id,
+         app.name,
+         app.app_ver as version,
+         app.os,
+         app.arch,
+         app.src_repo as srcRepo,
+         app.category as category,
+         app.icon_url as iconUrl,
+         app.description,
+         app.installation,
+         app.download_count as downloadCount,
+         app.pkg_id as pkgId,
+         e.name as  epkg_name,
+         rpm.name as rpm_name
+         from (SELECT * FROM application_package limit #{start},#{pagesize} ) app
+         LEFT JOIN
+         epkg_pkg e ON app.name= e.name
+         LEFT JOIN
+         rpm_pkg_base rpm ON app.name=rpm.name
+
+         ) a-->
+    </select>
+    <select id="getEpkgSoftwareInfo" resultType="com.softwaremarket.collect.dto.SoftwareEpkgDto">
+        <!--select id,
+        name,
+        version,
+        os,
+        arch,
+        src_repo as srcRepo,
+        summary ,
+        description ,
+        epkg_category category,
+        date_format(epkg_update_at,'%Y-%m-%d %H:%i:%S') as updatetime,
+        epkg_size as size,
+        bin_download_url as binDownloadUrl
+        from epkg_pkg
+        limit #{start},#{pagesize}-->
+
+
+        select DISTINCT
+        e.id,
+        e.name,
+        e.version,
+        e.os,
+        e.arch,
+        e.src_repo as srcRepo,
+        e.summary ,
+        e.description ,
+        e.category as category,
+        date_format(e.epkg_update_at,'%Y-%m-%d %H:%i:%S') as updatetime,
+        e.epkg_size as size,
+        e.bin_download_url as binDownloadUrl,
+        e.requires as requiresText,
+        e.installation as installation,
+        e.provides as providesText,
+        e.download_count as downloadCount,
+        e.pkg_id as pkgId,
+        os.origin_pkg as originPkg
+        from (SELECT * FROM  epkg_pkg limit #{start},#{pagesize}) e
+        left JOIN
+        external_os os
+        ON e.name=os.target_pkg
+
+    </select>
+
+</mapper>
