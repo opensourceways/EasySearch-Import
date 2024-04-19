@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: EaseSearch-data-import-easysoftware
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url:
+    username:
+    password:
+    druid:
+      # 初始连接数
+      initial-size: 20
+      # 最大连接数
+      max-active: 500
+      # 最小连接池数量和最大连接池数量
+      min-idle: 10
+      # 配置获取连接等待超时的时间，单位为毫秒
+      max-wait: 60000
+      # 配置间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒
+      time-between-eviction-runs-millis: 60000
+      # 配置一个连接在池中最小、最大生存的时间，单位是毫秒
+      min-evictable-idle-time-millis: 300000
+      # 配置一个连接在池中最大生存的时间，单位是毫秒
+      max-evictable-idle-time-millis: 900000
+      # 配置从连接池获取连接时，是否检查连接有效性，true每次都检查；false不检查。做了这个配置会降低性能。
+      test-on-borrow: false
+      # 配置向连接池归还连接时，是否检查连接有效性，true每次都检查；false不检查。做了这个配置会降低性能
+      test-on-return: false
+      # 配置检测连接是否有效
+      validation-query: SELECT 1
+      # 申请连接的时候检测，如果空闲时间大于timeBetweenEvictionRunsMillis，执行validationQuery检测连接是否有效。
+      test-while-idle: true
+      # 配置监控统计拦截的filters，stat:监控统计、log4j：日志记录、wall：防御sql注入
+      filters: stat,wall,log4j2
+      # 监控页面配置
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        login-username:
+        login-password:
+        allow:
+        deny:
+      web-stat-filter:
+        enabled: true
+        url-pattern: /*
+        exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*"
+        session-stat-enable: true
+
+elasticsearch:
+  url:
+  username:
+  password:
+
+logging:
+  level:
+    com.qsz.module: info
+
+
+softwareconfig:
+  sotfwareDetailUrl:
+  importEsIndex:
+  mappingPath:
+  pagesize: 5000
+  schedule: 0 52 9 * * ?
