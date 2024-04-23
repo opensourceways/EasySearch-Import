@@ -46,7 +46,7 @@ RUN yum update -y \
 RUN groupadd -g 1001 easysearch \
     && useradd -u 1001 -g easysearch -s /bin/bash -m easysearch
 
-ENV WORKSPACE=/home/easysearch
+ENV WORKSPACE=/opt/home/easysearch
 ENV TARGET=${WORKSPACE}/file/target
 ENV BASEPATH=${WORKSPACE}
 
