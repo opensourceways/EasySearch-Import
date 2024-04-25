@@ -189,7 +189,12 @@ public class Parse {
         String v = path.substring(path.indexOf("/") + 1);
         int location = v.indexOf("/");
         if (location > 0) {
-            jsonMap.put("version", v.substring(0, location));
+            String version=v.substring(0, location);
+            //install文档r2.3.q1版本替换成r2.3.0rc1
+            if("r2.3.q1".equals(version)){
+                version="r2.3.0rc1";
+            }
+            jsonMap.put("version", version);
         } else {
             jsonMap.put("version", "-");
         }
