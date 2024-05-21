@@ -13,6 +13,8 @@ import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -153,6 +155,30 @@ public class PublicClient {
             System.out.println(e.getMessage());
         }
 
+    }
+
+
+    public static void  deleteByType(String index,String type){
+        DeleteByQueryRequest request = new DeleteByQueryRequest(index);
+        request.setQuery(QueryBuilders.termQuery("type",type)); // 根据type删除类型文档
+        try {
+            // 执行删除请求并获取响应
+            BulkByScrollResponse response = restHighLevelClient.deleteByQuery(request, RequestOptions.DEFAULT);
+
+            // 处理响应
+            long deletedDocs = response.getDeleted();
+
+            System.out.println("index:"+index+",type:"+type+",Deleted documents: " + deletedDocs);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        // 关闭客户端连接
+        /*try {
+            restHighLevelClient.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }*/
     }
 
 }
