@@ -158,9 +158,9 @@ public class PublicClient {
     }
 
 
-    public static void  deleteByType(String index,String type){
+    public static void deleteByType(String index, String type) {
         DeleteByQueryRequest request = new DeleteByQueryRequest(index);
-        request.setQuery(QueryBuilders.termQuery("type",type)); // 根据type删除类型文档
+        request.setQuery(QueryBuilders.termQuery("type", type)); // 根据type删除类型文档
         try {
             // 执行删除请求并获取响应
             BulkByScrollResponse response = restHighLevelClient.deleteByQuery(request, RequestOptions.DEFAULT);
@@ -168,17 +168,11 @@ public class PublicClient {
             // 处理响应
             long deletedDocs = response.getDeleted();
 
-            System.out.println("index:"+index+",type:"+type+",Deleted documents: " + deletedDocs);
+            System.out.println("index:" + index + ",type:" + type + ",Deleted documents: " + deletedDocs);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // 关闭客户端连接
-        /*try {
-            restHighLevelClient.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
     }
 
 }

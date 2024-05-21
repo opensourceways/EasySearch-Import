@@ -52,7 +52,6 @@ public class App {
                     Map<String, Object> escape = Parse.parse(paresFile);
                     if (null != escape) {
                         inserDataList.add(escape);
-                        //  PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
                         idSet.add((String) escape.get("path"));
                     } else {
                         logger.info("parse null : " + paresFile.getPath());
@@ -82,13 +81,6 @@ public class App {
                 PublicClient.insert(lm, INDEX_PREFIX + "_" + lm.get("lang"));
             }
         }
-        /*for (Map<String, Object> lm : inserDataMap) {
-            PublicClient.insert(lm, INDEX_PREFIX + "_" + lm.get("lang"));
-            idSet.add((String) lm.get("path"));
-        }*/
-
-        /*logger.info("start delete expired document");
-        PublicClient.deleteExpired(idSet, INDEX_PREFIX + "_*");*/
     }
 
 
