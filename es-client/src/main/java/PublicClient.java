@@ -170,7 +170,7 @@ public class PublicClient {
 
             System.out.println("index:" + index + ",type:" + type + ",Deleted documents: " + deletedDocs);
         } catch (Exception e) {
-            e.printStackTrace();
+
         }
 
     }
