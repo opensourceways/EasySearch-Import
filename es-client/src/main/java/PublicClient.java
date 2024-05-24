@@ -152,7 +152,7 @@ public class PublicClient {
             restHighLevelClient.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
 
         } catch (Exception e) {
-
+            System.out.println(e.getMessage());
         }
 
     }
@@ -170,7 +170,7 @@ public class PublicClient {
 
             System.out.println("index:" + index + ",type:" + type + ",Deleted documents: " + deletedDocs);
         } catch (Exception e) {
-
+            System.out.println(e.getMessage());
         }
 
     }
