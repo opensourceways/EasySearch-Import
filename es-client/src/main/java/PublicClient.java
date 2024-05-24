@@ -152,7 +152,7 @@ public class PublicClient {
             restHighLevelClient.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
 
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+
         }
 
     }
