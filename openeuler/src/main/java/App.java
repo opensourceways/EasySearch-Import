@@ -78,7 +78,13 @@ public class App {
             String lang = split[1];
             PublicClient.deleteByType(INDEX_PREFIX + "_" + lang, type);
             for (Map<String, Object> lm : stringListEntry.getValue()) {
-                PublicClient.insert(lm, INDEX_PREFIX + "_" + lm.get("lang"));
+                try {
+                    PublicClient.insert(lm, INDEX_PREFIX + "_" + lm.get("lang"));
+                } catch (Exception e) {
+                    logger.error(lm.toString());
+                    logger.error(e.toString());
+                    logger.error(e.getMessage());
+                }
             }
         }
     }
