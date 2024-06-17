@@ -19,6 +19,8 @@ import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.xcontent.XContentType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
@@ -33,7 +35,7 @@ import java.util.Set;
 public class PublicClient {
 
     public static RestHighLevelClient restHighLevelClient;
-
+    private static final Logger logger = LoggerFactory.getLogger(PublicClient.class);
     public static void CreateClientFormConfig(String configPath) throws Exception {
         Yaml yaml = new Yaml(new Constructor(YamlConfig.class));
         InputStream inputStream = new FileInputStream(configPath);
@@ -42,9 +44,9 @@ public class PublicClient {
         File configFile = new File(configPath);
         if (configFile.exists()) {
             if (configFile.delete()) {
-                System.out.println("File deleted successfully");
+                logger.info("File deleted successfully");
             } else {
-                System.out.println("Failed to delete the file");
+                logger.info("Failed to delete the file");
             }
         }
 
@@ -152,7 +154,7 @@ public class PublicClient {
             restHighLevelClient.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
 
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            logger.error(e.getMessage());
         }
 
     }
@@ -168,9 +170,9 @@ public class PublicClient {
             // 处理响应
             long deletedDocs = response.getDeleted();
 
-            System.out.println("index:" + index + ",type:" + type + ",Deleted documents: " + deletedDocs);
+            logger.info("index:" + index + ",type:" + type + ",Deleted documents: " + deletedDocs);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            logger.error(e.getMessage());
         }
 
     }
