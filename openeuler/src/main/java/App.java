@@ -4,6 +4,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class App {
     private static final String TARGET = System.getenv("TARGET");
@@ -43,13 +44,14 @@ public class App {
         Set<String> idSet = new HashSet<>();
 
         Collection<File> listFiles = FileUtils.listFiles(indexFile, new String[]{"md", "html"}, true);
+        List<Map<String, Object>> inserDataList = new ArrayList<>();
 
         for (File paresFile : listFiles) {
             if (!paresFile.getName().startsWith("_")) {
                 try {
                     Map<String, Object> escape = Parse.parse(paresFile);
                     if (null != escape) {
-                        PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                        inserDataList.add(escape);
                         idSet.add((String) escape.get("path"));
                     } else {
                         logger.info("parse null : " + paresFile.getPath());
@@ -65,14 +67,26 @@ public class App {
         if (null == customizeEscape) {
             return;
         }
+        inserDataList.addAll(customizeEscape);
 
-        for (Map<String, Object> lm : customizeEscape) {
-            PublicClient.insert(lm, INDEX_PREFIX + "_" + lm.get("lang"));
-            idSet.add((String) lm.get("path"));
+        Map<String, List<Map<String, Object>>> typeMap = inserDataList.stream().collect(Collectors.groupingBy(a -> a.get("type") + "#" + a.get("lang")
+        ));
+        for (Map.Entry<String, List<Map<String, Object>>> stringListEntry : typeMap.entrySet()) {
+            String key = stringListEntry.getKey();
+            String[] split = key.split("#");
+            String type = split[0];
+            String lang = split[1];
+            PublicClient.deleteByType(INDEX_PREFIX + "_" + lang, type);
+            for (Map<String, Object> lm : stringListEntry.getValue()) {
+                try {
+                    PublicClient.insert(lm, INDEX_PREFIX + "_" + lm.get("lang"));
+                } catch (Exception e) {
+                    logger.error(lm.toString());
+                    logger.error(e.toString());
+                    logger.error(e.getMessage());
+                }
+            }
         }
-
-        logger.info("start delete expired document");
-        PublicClient.deleteExpired(idSet, INDEX_PREFIX + "_*");
     }
 
 
