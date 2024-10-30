@@ -41,6 +41,17 @@ public class Parse {
         jsonMap.put("type", type);
         jsonMap.put("articleName", fileName);
         jsonMap.put("path", path);
+        // 默认版本v0.0
+        jsonMap.put("version", "v0.0.0");
+        jsonMap.put("group", path);
+        String[] split = path.split("/");
+        for (String s : split) {
+            // 字母为v开头并且为数字
+            if (s.matches("^v\\d.*")) {
+                jsonMap.put("version", s);
+                jsonMap.put("group", path.replace("/"+s,""));
+            }
+        }
 
         String fileContent = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
 
@@ -92,5 +103,5 @@ public class Parse {
         }
 
     }
-    
+
 }
