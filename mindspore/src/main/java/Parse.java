@@ -49,6 +49,7 @@ public class Parse {
         put("mindquantum", "MindSpore Quantum");
         put("sciai", "MindSpore SciAI");
         put("mindearth", "MindSpore Earth");
+        put("mindformers","MindSpore Transformers");
     }};
 
     public static Map<String, Object> parse(File file) throws Exception {

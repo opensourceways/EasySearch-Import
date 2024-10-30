@@ -1,8 +1,6 @@
 import java.io.File;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -49,28 +47,67 @@ public class App {
         Set<String> idSet = new HashSet<>();
 
         Collection<File> listFiles = FileUtils.listFiles(indexFile, new String[]{"md", "html"}, true);
+        ArrayList<Map<String, Object>> dateLists = new ArrayList<>();
 
-               for (File paresFile : listFiles) {
+        for (File paresFile : listFiles) {
             if (!paresFile.getName().startsWith("_")) {
                 try {
                     Map<String, Object> escape = Parse.parse(paresFile);
                     if (null != escape) {
-                        PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                        dateLists.add(escape);
                         idSet.add((String) escape.get("path"));
                     } else {
-                        System.out.println("parse null : " + paresFile.getPath());
+                        logger.info("parse null : " + paresFile.getPath());
                     }
                 } catch (Exception e) {
-                    logger.info(paresFile.getPath());
-                    logger.info(e.getMessage());
+                    logger.error(paresFile.getPath());
+                    logger.error(e.getMessage());
                 }
+            }
+        }
+
+        Map<Object, List<Map<String, Object>>> group = dateLists.stream().collect(Collectors.groupingBy(a -> a.get("group")));
+        for (Map.Entry<Object, List<Map<String, Object>>> objectListEntry : group.entrySet()) {
+            List<Map<String, Object>> value = objectListEntry.getValue();
+            if (value.size() == 1) {
+                Map<String, Object> map = value.get(0);
+                map.put("versionTag","maximumVersion");
+            } else {
+                value.sort((u1, u2) -> compareVersions(String.valueOf(u2.get("version")), String.valueOf(u1.get("version"))));
+                Map<String, Object> map = value.get(0);
+                map.put("versionTag","maximumVersion");
+            }
+        }
+        for (Map<String, Object> escape : dateLists) {
+            try {
+                if(!escape.containsKey("versionTag")){
+                    escape.put("versionTag","common");
+                }
+                PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+            } catch (Exception e) {
+                logger.error(e.getMessage());
             }
         }
         logger.info("start delete expired document");
         PublicClient.deleteExpired(idSet, INDEX_PREFIX + "_*");
 
     }
-    
+
+    private static int compareVersions(String v1, String v2) {
+        String[] parts1 = v1.substring(1).split("\\.");
+        String[] parts2 = v2.substring(1).split("\\.");
+
+        for (int i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+            int num1 = i < parts1.length ? Integer.parseInt(parts1[i]) : 0;
+            int num2 = i < parts2.length ? Integer.parseInt(parts2[i]) : 0;
+
+            if (num1 != num2) {
+                return num1 - num2;
+            }
+        }
+        return 0;
+    }
+
 }
 
 
