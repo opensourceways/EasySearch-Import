@@ -7,6 +7,18 @@ ARG TOKEN
 
 ENV TOKEN=${TOKEN}
 
+ARG gitee_branch
+
+ENV gitee_branch=${gitee_branch}
+
+ARG gitee_user
+
+ENV gitee_user=${gitee_user}
+
+ARG gitee_pass
+
+ENV gitee_pass=${gitee_pass}
+
 WORKDIR /
 
 RUN apt update \
