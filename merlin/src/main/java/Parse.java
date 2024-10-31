@@ -47,7 +47,7 @@ public class Parse {
         String[] split = path.split("/");
         for (String s : split) {
             // 字母为v开头并且为数字
-            if (s.matches("^v\\d.*")) {
+            if (s.matches("^\\d+(\\.\\d+)+$")) {
                 jsonMap.put("version", s);
                 jsonMap.put("group", path.replace("/"+s,""));
             }
