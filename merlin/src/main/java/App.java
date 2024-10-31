@@ -94,6 +94,12 @@ public class App {
     }
 
     private static int compareVersions(String v1, String v2) {
+        if (!v1.contains("v")) {
+            v1 = "v" + v1;
+        }
+        if (!v2.contains("v")) {
+            v2 = "v" + v2;
+        }
         String[] parts1 = v1.substring(1).split("\\.");
         String[] parts2 = v2.substring(1).split("\\.");
 
