@@ -1,4 +1,6 @@
 import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.index.IndexRequest;
@@ -31,7 +33,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class PublicClient {
-
+    private static final Logger logger = LogManager.getLogger(PublicClient.class);
     public static RestHighLevelClient restHighLevelClient;
     public static void deleteByType(String index, String type) {
         DeleteByQueryRequest request = new DeleteByQueryRequest(index);
@@ -43,9 +45,9 @@ public class PublicClient {
             // 处理响应
             long deletedDocs = response.getDeleted();
 
-            System.out.println("index:" + index + ",type:" + type + ",Deleted documents: " + deletedDocs);
+            logger.info("index:" + index + ",type:" + type + ",Deleted documents: " + deletedDocs);
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            logger.error(e.getMessage());
         }
 
     }
