@@ -1,4 +1,6 @@
 import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.index.IndexRequest;
@@ -13,6 +15,8 @@ import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.reindex.BulkByScrollResponse;
+import org.elasticsearch.index.reindex.DeleteByQueryRequest;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -29,9 +33,24 @@ import java.util.Map;
 import java.util.Set;
 
 public class PublicClient {
-
+    private static final Logger logger = LogManager.getLogger(PublicClient.class);
     public static RestHighLevelClient restHighLevelClient;
+    public static void deleteByType(String index, String type) {
+        DeleteByQueryRequest request = new DeleteByQueryRequest(index);
+        request.setQuery(QueryBuilders.termQuery("type", type)); // 根据type删除类型文档
+        try {
+            // 执行删除请求并获取响应
+            BulkByScrollResponse response = restHighLevelClient.deleteByQuery(request, RequestOptions.DEFAULT);
 
+            // 处理响应
+            long deletedDocs = response.getDeleted();
+
+            logger.info("index:" + index + ",type:" + type + ",Deleted documents: " + deletedDocs);
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+
+    }
     public static void CreateClientFormConfig(String configPath) throws Exception {
         Yaml yaml = new Yaml(new Constructor(YamlConfig.class));
         InputStream inputStream = new FileInputStream(configPath);
