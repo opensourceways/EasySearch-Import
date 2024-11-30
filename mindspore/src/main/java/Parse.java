@@ -1,6 +1,9 @@
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.commons.io.FileUtils;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
@@ -113,6 +116,162 @@ public class Parse {
             }
         }
         return jsonMap;
+    }
+    public static List<Map<String, Object>> parsePaperJson(File jsonFile) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<Map<String, Object>> ansList = new ArrayList<>();
+        try {
+            JsonNode rootNode = objectMapper.readTree(jsonFile);
+
+            if(rootNode.isArray()) {
+                for(JsonNode paperNode : rootNode) {
+                    Map<String, Object> jsonMap = new HashMap<>();
+                    String title = paperNode.get("title").asText();
+                    String desc = paperNode.get("desc").asText();
+                    String domainName = paperNode.get("domainName").asText();
+                    String publishedBy = paperNode.get("publishedBy").asText();
+                    String sourcesName = paperNode.get("sourcesName").asText();
+                    String postedOn = paperNode.get("postedOn").asText();
+                    String href = paperNode.get("href").asText();
+                    String codeLink = paperNode.get("codeLink").asText();
+                    jsonMap.put("title", title);
+                    jsonMap.put("textContent", desc);
+                    jsonMap.put("domainName", domainName);
+                    jsonMap.put("publishedBy", publishedBy);
+                    jsonMap.put("sourcesName", sourcesName);
+                    jsonMap.put("postedOn", postedOn);
+                    jsonMap.put("path", href);
+                    jsonMap.put("codeLink", codeLink);
+                    jsonMap.put("lang", "zh");
+                    jsonMap.put("type", "paper");
+                    ansList.add(jsonMap);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();  
+        }
+        return ansList;
+    }
+
+    public static List<Map<String, Object>> parseCaseJson(File jsonFile) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<Map<String, Object>> ansList = new ArrayList<>();
+        try {
+            JsonNode rootNode = objectMapper.readTree(jsonFile);
+
+            if(rootNode.isArray()) {
+                for(JsonNode caseNode : rootNode) {
+                    Map<String, Object> jsonMap = new HashMap<>();
+                    String title = caseNode.get("title").asText();
+                    String desc = caseNode.get("desc").asText();
+                    String category = caseNode.get("category").asText();
+                    String caseType = caseNode.get("type").asText();
+                    String logoImg = caseNode.get("logoImg").asText();
+                    String href = caseNode.get("href").asText();
+
+                    String logoImgDark = null;
+                    if (caseNode.get("logoImgDark") != null) {
+                        logoImgDark = caseNode.get("logoImgDark").asText();
+                    }
+
+                    JsonNode technologiesNode = caseNode.get("technologies");
+                    List<String> technologies = new ArrayList<>();
+                    if (technologiesNode != null && technologiesNode.isArray()) {
+                        for (JsonNode techNode : technologiesNode) {
+
+                            technologies.add(techNode.asText());
+                        }
+                    } else if (technologiesNode != null) {
+                        technologies.add(technologiesNode.asText());
+                    }
+
+                    jsonMap.put("title", title);
+                    jsonMap.put("textContent", desc);
+                    jsonMap.put("lang", "zh");
+                    jsonMap.put("type", "case");
+                    jsonMap.put("path", href);
+                    jsonMap.put("category", category);
+                    jsonMap.put("technologies", technologies);
+                    jsonMap.put("logoImg", logoImg);
+                    jsonMap.put("caseType", caseType);
+                    jsonMap.put("logoImgDark", logoImgDark);
+                    ansList.add(jsonMap);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();  
+        }
+        return ansList;
+    }
+
+    public static List<Map<String, Object>> parseCourseJson(File jsonFile) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<Map<String, Object>> ansList = new ArrayList<>();
+        try {
+            JsonNode rootNode = objectMapper.readTree(jsonFile);
+            if(rootNode.isArray()) {
+                for (JsonNode courseNode : rootNode) {
+                    String courseId = (courseNode.get("id") != null) ? courseNode.get("id").asText() : null;
+                    String courseCatalog = (courseNode.get("catalog") != null) ? courseNode.get("catalog").asText() : null;
+                    String courseDescription = (courseNode.get("description") != null) ? courseNode.get("description").asText() : null;
+                    String courseSeries = (courseNode.get("series") != null) ? courseNode.get("series").asText() : null;
+                    String courseClasses = (courseNode.get("classes") != null) ? courseNode.get("classes").asText() : null;
+                    String courseCover = (courseNode.get("cover") != null) ? courseNode.get("cover").asText() : null;
+                    String courseCatalogName = (courseNode.get("catalogName") != null) ? courseNode.get("catalogName").asText() : null;
+                    String courseCatalogDesc = (courseNode.get("catalogDesc") != null) ? courseNode.get("catalogDesc").asText() : null;
+                    JsonNode childrenNodes = courseNode.get("children");
+                    if (childrenNodes != null && childrenNodes.isArray()) {
+                        for (JsonNode childrenNode : childrenNodes) {
+                            String childrenId = (childrenNode.get("id") != null) ? childrenNode.get("id").asText() : null;
+                            String childrenName = (childrenNode.get("name") != null) ? childrenNode.get("name").asText() : null;
+                            String childrenCount = (childrenNode.get("count") != null) ? childrenNode.get("count").asText() : null;
+                            String childrenCoverImg = (childrenNode.get("coverImg") != null) ? childrenNode.get("coverImg").asText() : null;
+                            JsonNode courseListNodes = (childrenNode.get("courseList") != null) ? childrenNode.get("courseList") : null;
+                            if (courseListNodes != null && courseListNodes.isArray()) {
+                                for (JsonNode courseListNode : courseListNodes) {
+                                    Map<String, Object> jsonMap = new HashMap<>();
+                                    String courseListId = (courseListNode.get("id") != null) ? courseListNode.get("id").asText() : null;
+                                    String courseListCategoryId = (courseListNode.get("categoryId") != null) ? courseListNode.get("categoryId").asText() : null;
+                                    String courseListTitle = (courseListNode.get("title") != null) ? courseListNode.get("title").asText() : null;
+                                    String courseListLable = (courseListNode.get("lable") != null) ? courseListNode.get("lable").asText() : null;
+                                    String courseListLang = (courseListNode.get("lang") != null) ? courseListNode.get("lang").asText() : null;
+                                    String courseListForm = (courseListNode.get("form") != null) ? courseListNode.get("form").asText() : null;
+                                    String courseListVideoType = (courseListNode.get("videoType") != null) ? courseListNode.get("videoType").asText() : null;
+                                    String courseListVideoUrl = (courseListNode.get("videoUrl") != null) ? courseListNode.get("videoUrl").asText() : null;
+                                    String courseListPlayMin = (courseListNode.get("playMin") != null) ? courseListNode.get("playMin").asText() : null;
+                                    jsonMap.put("type", "course");
+                                    jsonMap.put("courseListPlayMin", courseListPlayMin);
+                                    jsonMap.put("path", courseListVideoUrl);
+                                    jsonMap.put("courseListVideoType", courseListVideoType);
+                                    jsonMap.put("courseListForm", courseListForm);
+                                    jsonMap.put("lang", courseListLang);
+                                    jsonMap.put("courseListLable", courseListLable);
+                                    jsonMap.put("title", courseListTitle);
+                                    jsonMap.put("courseListCategoryId", courseListCategoryId);
+                                    jsonMap.put("courseListId", courseListId);
+                                    jsonMap.put("childrenCoverImg", childrenCoverImg);
+                                    jsonMap.put("childrenCount", childrenCount);
+                                    jsonMap.put("textContent", childrenName);
+                                    jsonMap.put("childrenId", childrenId);
+                                    jsonMap.put("courseCatalogDesc", courseCatalogDesc);
+                                    jsonMap.put("courseCatalogName", courseCatalogName);
+                                    jsonMap.put("courseCover", courseCover);
+                                    jsonMap.put("courseClasses", courseClasses);
+                                    jsonMap.put("courseSeries", courseSeries);
+                                    jsonMap.put("courseDescription", courseDescription);
+                                    jsonMap.put("courseCatalog", courseCatalog);
+                                    jsonMap.put("courseId", courseId);
+                                    ansList.add(jsonMap);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();  
+        }
+        return ansList;
     }
 
     public static Boolean parseHtml(Map<String, Object> jsonMap, String fileContent) {
