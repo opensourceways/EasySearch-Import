@@ -302,7 +302,8 @@ public class Parse {
             }
             title = title.replaceAll("¶", "");
             title = title.replaceAll("\uF0C1", "");
-            textContent = one.text();
+            // 去除section最外层包裹的部分(含有面包屑等冗余信息)
+            textContent = sections.get(sections.size()>1 ? 1:0).text();
         } else {
             System.out.println("html can not find Elements with tag equal section");
             return false;
