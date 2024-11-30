@@ -1,13 +1,19 @@
 #!/bin/bash
 SOURCE=/docs-file/source
 TARGET=/docs-file/target
+TARGET_PAPERS=/docs-file/target/papers
+TARGET_CASES=/docs-file/target/cases
+TARGET_COURSES=/docs-file/target/courses
 mkdir -p ${SOURCE}
 mkdir -p ${TARGET}
+mkdir -p ${TARGET_PAPERS}
+mkdir -p ${TARGET_CASES}
+mkdir -p ${TARGET_COURSES}
 
 # shellcheck disable=SC2164
 cd ${SOURCE}
 
-git clone https://gitee.com/mindspore/website-docs.git
+git clone --depth 1 https://gitee.com/mindspore/website-docs.git
 
 if [ ! -d "${SOURCE}/website-docs" ]; then
  rm -rf ${TARGET}
@@ -66,3 +72,23 @@ find ./ -name genindex.html |xargs rm -rf
 find ./ -name py-modindex.html |xargs rm -rf
 # shellcheck disable=SC2038
 find ./ -name unabridged_api.html |xargs rm -rf
+
+# 从mindspore-portal下载 papers
+# shellcheck disable=SC2164
+cd ${SOURCE}
+
+# git clone --depth 1 https://gitee.com/mindspore/mindspore-portal.git
+git clone --depth 1 -b ${gitee_branch} https://${gitee_user}:${gitee_pass}@gitee.com/mindspore/mindspore-portal.git
+
+if [ ! -d "${SOURCE}/mindspore-portal" ]; then
+ rm -rf ${TARGET}
+ exit
+fi
+
+
+# shellcheck disable=SC2164
+cd ${SOURCE}/mindspore-portal
+
+cp -r ${SOURCE}/mindspore-portal/packages/website/data/papers/* ${TARGET_PAPERS}/
+cp -r ${SOURCE}/mindspore-portal/packages/website/data/cases/* ${TARGET_CASES}/
+cp -r ${SOURCE}/mindspore-portal/packages/website/data/courses/* ${TARGET_COURSES}/
