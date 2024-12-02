@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 public class App {
     private static final String TARGET = System.getenv("TARGET");
 
+    private static final String TARGET_SIG = System.getenv("TARGET") + "/sig";
+
     private static final String APPLICATION_PATH = System.getenv("APPLICATION_PATH");
 
     private static final String MAPPING_PATH = System.getenv("MAPPING_PATH");
@@ -22,6 +24,7 @@ public class App {
             PublicClient.CreateClientFormConfig(APPLICATION_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_zh", MAPPING_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_en", MAPPING_PATH);
+            sigData();
             fileDate();
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -30,6 +33,42 @@ public class App {
 
         logger.info("import end");
         System.exit(0);
+    }
+
+    public static void sigData() throws Exception {
+        File indexFile = new File(TARGET_SIG);
+        if (!indexFile.exists()) {
+            logger.info("%s folder does not exist%n", indexFile.getPath());
+            return;
+        }
+
+        logger.info("begin to update sig data");
+        // 处理yaml文件
+        Collection<File> listFiles = new ArrayList<>();
+        // 获取指定目录的直接子目录
+        File[] subdirectories = indexFile.listFiles((dir, name) -> new File(dir, name).isDirectory());
+        if (subdirectories != null) {
+            // 遍历每个子目录，并搜索其中的.yaml文件（仍然不递归）
+            for (File subdir : subdirectories) {
+                Collection<File> filesInSubdirectory = FileUtils.listFiles(subdir, new String[]{"yaml"}, false);
+                listFiles.addAll(filesInSubdirectory);
+            }
+        }
+
+        for (File paresFile : listFiles) {
+                try {
+                    // sig information has two language
+                    Map<String, Object> escape = Parse.parseSigYaml(paresFile, "zh");
+                    if (null != escape) {
+                        PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                    } else {
+                        logger.info("parse null : " + paresFile.getPath());
+                    }
+                } catch (Exception e) {
+                    logger.error(paresFile.getPath());
+                    logger.error(e.getMessage());
+                }
+            }
     }
 
     public static void fileDate() throws Exception {

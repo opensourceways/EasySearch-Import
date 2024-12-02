@@ -9,6 +9,7 @@ mkdir -p ${SOURCE}
 cd ${SOURCE}
 git clone https://gitee.com/openeuler/openEuler-portal.git
 git clone https://gitee.com/openeuler/docs.git
+git clone https://gitee.com/openeuler/community.git
 # shellcheck disable=SC2164
 cd openEuler-portal
 pnpm install
@@ -81,6 +82,9 @@ do
   cp -r ${SOURCE}/docs/docs/zh/docs/* ${TARGET}/zh/docs/$b/docs/
   cp -r ${SOURCE}/docs/docs/en/docs/* ${TARGET}/en/docs/$b/docs/
 done
+
+cd ${SOURCE}/community
+cp -r ${SOURCE}/community/sig/* ${TARGET}/sig
 
 
 

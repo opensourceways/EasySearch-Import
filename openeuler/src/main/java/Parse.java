@@ -3,8 +3,6 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.commons.io.FileUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.ImageType;
-import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
@@ -17,11 +15,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
+
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -679,8 +679,8 @@ public class Parse {
         return sbf.toString();
     }
 
-    public static Map<String, String> getRandomIpHeader() {
-        Random random = new Random(System.currentTimeMillis());
+    public static Map<String, String> getRandomIpHeader() throws NoSuchAlgorithmException, NoSuchProviderException {
+        SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
         String ip = (random.nextInt(255) + 1) + "." + (random.nextInt(255) + 1) + "." + (random.nextInt(255) + 1) + "."
                 + (random.nextInt(255) + 1);
         HashMap<String, String> header = new HashMap<>();
@@ -689,5 +689,52 @@ public class Parse {
         header.put("HTTP_CLIENT_IP", ip);
         header.put("REMOTE_ADDR", ip);
         return header;
+    }
+
+    public static Map<String, Object> parseSigYaml(File paresFile, String lang) throws Exception{
+            Yaml yaml = new Yaml();
+            Map<String, Object> resMap = new HashMap<>();
+            try (InputStream inputStream = new FileInputStream(paresFile)) {
+                Map<String, Object> dataMap = yaml.load(inputStream);
+                resMap.put("title", dataMap.get("name"));
+                resMap.put("lang", lang);
+                resMap.put("type", "sig");
+                String path = "https://www.openeuler.org/" + lang + "/sig/sig-list/" + dataMap.get("name");
+                resMap.put("path", path);
+                String textContent = "maintainers: ";
+                if (dataMap.containsKey("maintainers") && dataMap.get("maintainers") instanceof List) {
+                    List<?> maintainersList = (List<?>) dataMap.get("maintainers");
+                    for (Object maintainerObj : maintainersList) {
+                        if (maintainerObj instanceof Map) {
+                            Map<String, Object> maintainerMap = (Map<String, Object>) maintainerObj;
+                            textContent += textContent + maintainerMap.get("name") + ","; 
+                            textContent += maintainerMap.get("gitee_id") + ";";
+                        }
+                    }
+                }
+                textContent += "\n" + "committers: ";
+                if (dataMap.containsKey("repositories") && dataMap.get("repositories") instanceof List) {
+                    List<?> reposList = (List<?>) dataMap.get("repositories");
+                    for (Object repoObj : reposList) {
+                        if (repoObj instanceof Map) {
+                            Map<String, Object> repoMap = (Map<String, Object>) repoObj;
+                            if(repoMap.containsKey("committers") && repoMap.get("committers") instanceof List){
+                                List<?> committersList = (List<?>) repoMap.get("committers");
+                                for (Object committerObj : committersList) {
+                                    if (committerObj instanceof Map) {
+                                        Map<String, Object> committerMap = (Map<String, Object>) committerObj;
+                                        textContent += textContent + committerMap.get("name") + ","; 
+                                        textContent += committerMap.get("gitee_id") + ";";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                resMap.put("textContent", textContent);
+            } catch (IOException e) {
+                e.printStackTrace();  
+            }
+            return resMap;
     }
 }
