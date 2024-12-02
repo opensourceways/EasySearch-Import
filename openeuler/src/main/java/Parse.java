@@ -707,7 +707,7 @@ public class Parse {
                     for (Object maintainerObj : maintainersList) {
                         if (maintainerObj instanceof Map) {
                             Map<String, Object> maintainerMap = (Map<String, Object>) maintainerObj;
-                            textContent += textContent + maintainerMap.get("name") + ","; 
+                            textContent += maintainerMap.get("name") + ","; 
                             textContent += maintainerMap.get("gitee_id") + ";";
                         }
                     }
@@ -723,7 +723,7 @@ public class Parse {
                                 for (Object committerObj : committersList) {
                                     if (committerObj instanceof Map) {
                                         Map<String, Object> committerMap = (Map<String, Object>) committerObj;
-                                        textContent += textContent + committerMap.get("name") + ","; 
+                                        textContent += committerMap.get("name") + ","; 
                                         textContent += committerMap.get("gitee_id") + ";";
                                     }
                                 }
