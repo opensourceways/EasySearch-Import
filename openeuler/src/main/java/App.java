@@ -15,7 +15,7 @@ public class App {
 
     private static final String MAPPING_PATH = System.getenv("MAPPING_PATH");
 
-    private static final String INDEX_PREFIX = "openeuler_articles";
+    private static final String INDEX_PREFIX = "openeuler_articles" + "_test";
 
     private static final Logger logger = LoggerFactory.getLogger(App.class);
 
