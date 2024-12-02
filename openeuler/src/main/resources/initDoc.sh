@@ -18,6 +18,7 @@ pnpm build
 mkdir -p ${TARGET}/zh/
 mkdir -p ${TARGET}/en/
 mkdir -p ${TARGET}/ru/
+mkdir -p ${TARGET}/sig/
 
 if [ ! -d ${SOURCE}/openEuler-portal ]; then
  rm -rf ${TARGET}
@@ -84,7 +85,7 @@ do
 done
 
 cd ${SOURCE}/community
-cp -r ${SOURCE}/community/sig/* ${TARGET}/sig
+cp -r ${SOURCE}/community/sig/* ${TARGET}/sig/
 
 
 
