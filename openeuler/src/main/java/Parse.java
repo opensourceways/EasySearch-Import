@@ -737,4 +737,14 @@ public class Parse {
             }
             return resMap;
     }
+
+    public static Map<String, Object> parseEtherPad(Object text, String padId) {
+        Map<String, Object> resMap = new HashMap<>();
+        resMap.put("textContent", text.toString());
+        resMap.put("title", padId);
+        resMap.put("path", "https://etherpad.openeuler.org/p/" + padId);
+        resMap.put("lang", "zh");
+        resMap.put("type", "pad");
+        return resMap;
+    }
 }

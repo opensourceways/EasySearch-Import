@@ -2,6 +2,8 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import etherpad.EPLiteClient;
+
 import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,12 +21,15 @@ public class App {
 
     private static final Logger logger = LoggerFactory.getLogger(App.class);
 
+    private static final ImportConfig importConfig = new ImportConfig();
+
     public static void main(String[] args) {
         try {
             PublicClient.CreateClientFormConfig(APPLICATION_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_zh", MAPPING_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_en", MAPPING_PATH);
             sigData();
+            etherpadData();
             fileDate();
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -69,6 +74,31 @@ public class App {
                     logger.error(e.getMessage());
                 }
             }
+        logger.info("sig data imported successfully");
+    }
+
+    public static void etherpadData(){
+        String url = importConfig.getUrl();
+        String apiKey = importConfig.getApiKey();
+        EPLiteClient client = new EPLiteClient(url, apiKey);
+
+        Map result = client.listAllPads();
+        List padIds = (List) result.get("padIDs");
+
+        for(Object padId : padIds) {
+            Map<String, Object> resMap = client.getText((String) padId);
+            if(!resMap.containsKey("text")) {
+                try {
+                    Map<String, Object> escape = Parse.parseEtherPad(resMap.get("text"), padId.toString());
+                    if (null != escape) {
+                        PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                    }
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                }
+            }
+        }
+        logger.info("etherpad data imported successfully");
     }
 
     public static void fileDate() throws Exception {
