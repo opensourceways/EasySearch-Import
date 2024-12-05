@@ -18,6 +18,8 @@ public class App {
 
     private static final String INDEX_PREFIX = "mindspore_articles";
 
+    public static Set<String> idSet = new HashSet<>();
+
 
     public static void main(String[] args) {
         try {
@@ -85,6 +87,7 @@ public class App {
                 if (escapeList != null && !escapeList.isEmpty() ) {
                     for (Map<String, Object> escape : escapeList) {
                         PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                        idSet.add((String) escape.get("path"));
                     }
                 } else {
                     System.out.println("parse null : " + paresFile.getPath());
@@ -104,8 +107,6 @@ public class App {
         }
 
         System.out.println("begin to update document,开始更新");
-
-        Set<String> idSet = new HashSet<>();
 
         Collection<File> listFiles = FileUtils.listFiles(indexFile, new String[]{"md", "html"}, true);
 
