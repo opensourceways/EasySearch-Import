@@ -1,10 +1,21 @@
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import org.apache.commons.io.FileUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.rendering.ImageType;
-import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.commonmark.node.Node;
 import org.commonmark.parser.Parser;
@@ -16,18 +27,6 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
-
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import java.net.*;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Parse {
     public static final String BASEPATH = System.getenv("TARGET") + "/";
@@ -679,8 +678,8 @@ public class Parse {
         return sbf.toString();
     }
 
-    public static Map<String, String> getRandomIpHeader() {
-        Random random = new Random(System.currentTimeMillis());
+    public static Map<String, String> getRandomIpHeader() throws NoSuchAlgorithmException, NoSuchProviderException {
+        SecureRandom random = SecureRandom.getInstance("SHA1PRNG", "SUN");
         String ip = (random.nextInt(255) + 1) + "." + (random.nextInt(255) + 1) + "." + (random.nextInt(255) + 1) + "."
                 + (random.nextInt(255) + 1);
         HashMap<String, String> header = new HashMap<>();
@@ -689,5 +688,62 @@ public class Parse {
         header.put("HTTP_CLIENT_IP", ip);
         header.put("REMOTE_ADDR", ip);
         return header;
+    }
+
+    public static Map<String, Object> parseSigYaml(File paresFile, String lang, String sigPath) throws Exception{
+            Yaml yaml = new Yaml();
+            Map<String, Object> resMap = new HashMap<>();
+            try (InputStream inputStream = new FileInputStream(paresFile)) {
+                Map<String, Object> dataMap = yaml.load(inputStream);
+                resMap.put("title", dataMap.get("name"));
+                resMap.put("lang", lang);
+                resMap.put("type", "sig");
+                String path = sigPath + lang + "/sig/" + dataMap.get("name");
+                resMap.put("path", path);
+                String textContent = "maintainers: ";
+                if (dataMap.containsKey("maintainers") && dataMap.get("maintainers") instanceof List) {
+                    List<?> maintainersList = (List<?>) dataMap.get("maintainers");
+                    for (Object maintainerObj : maintainersList) {
+                        if (maintainerObj instanceof Map) {
+                            Map<String, Object> maintainerMap = (Map<String, Object>) maintainerObj;
+                            textContent += maintainerMap.getOrDefault("name","") + ","; 
+                            textContent += maintainerMap.getOrDefault("gitee_id","") + ";";
+                        }
+                    }
+                }
+                textContent += "\n" + "committers: ";
+                if (dataMap.containsKey("repositories") && dataMap.get("repositories") instanceof List) {
+                    List<?> reposList = (List<?>) dataMap.get("repositories");
+                    for (Object repoObj : reposList) {
+                        if (repoObj instanceof Map) {
+                            Map<String, Object> repoMap = (Map<String, Object>) repoObj;
+                            if(repoMap.containsKey("committers") && repoMap.get("committers") instanceof List){
+                                List<?> committersList = (List<?>) repoMap.get("committers");
+                                for (Object committerObj : committersList) {
+                                    if (committerObj instanceof Map) {
+                                        Map<String, Object> committerMap = (Map<String, Object>) committerObj;
+                                        textContent += committerMap.getOrDefault("name","") + ","; 
+                                        textContent += committerMap.getOrDefault("gitee_id","") + ";";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                resMap.put("textContent", textContent);
+            } catch (IOException e) {
+                logger.error("sig yaml parse error: {}", e.getMessage());
+            }
+            return resMap;
+    }
+
+    public static Map<String, Object> parseEtherPad(Object text, String padId, String etherpadPath) {
+        Map<String, Object> resMap = new HashMap<>();
+        resMap.put("textContent", text.toString());
+        resMap.put("title", padId);
+        resMap.put("path", etherpadPath + "p/" +  padId);
+        resMap.put("lang", "zh");
+        resMap.put("type", "etherpad");
+        return resMap;
     }
 }
