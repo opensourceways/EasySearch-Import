@@ -779,10 +779,13 @@ public class Parse {
 
             if (resMap.containsKey(keyString)) {
                 resMap.put("lang", langFlag);
-                if ("download-commercial-release".equals(paresFile.getName())) {
-                    resMap.put("path", "/" + langFlag + "download/commercial-release/");
-                } else {
+                if ("download-commercial-release.ts".equals(paresFile.getName())) {
+                    resMap.put("path", "/" + langFlag + "download/commercial-release/" + resMap.get("title"));
+                } else if ("download.ts".equals(paresFile.getName())){
                     resMap.put("path", "/" + langFlag + "download/archive/detail?version=" +  resMap.get("title"));
+                } else {
+                    logger.warn("file name changed");
+                    return resList;
                 }
                 resMap.put("type", "release");
                 resList.add(resMap);
@@ -799,7 +802,7 @@ public class Parse {
         if (resMap.size() > 0) {
             resMap.put("lang", langFlag);
             if ("download-commercial-release".equals(paresFile.getName())) {
-                resMap.put("path", "/" + langFlag + "download/commercial-release/");
+                resMap.put("path", "/" + langFlag + "download/commercial-release/" + resMap.get("title"));
             } else {
                 resMap.put("path", "/" + langFlag + "download/archive/detail?version=" + resMap.get("title"));
             }
