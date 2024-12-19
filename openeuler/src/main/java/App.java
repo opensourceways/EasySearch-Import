@@ -40,6 +40,7 @@ public class App {
             PublicClient.makeIndex(INDEX_PREFIX + "_en", MAPPING_PATH);
             sigData();
             etherpadData();
+            releaseData();
             fileDate();
         } catch (Exception e) {
             logger.error(e.getMessage());
