@@ -14,6 +14,11 @@ import java.util.regex.Pattern;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -745,5 +750,117 @@ public class Parse {
         resMap.put("lang", "zh");
         resMap.put("type", "etherpad");
         return resMap;
+    }
+
+    public static List<Map<String, Object>> parseReleaseData(File paresFile, String releasePath) {
+        List<Map<String, Object>> resList = new ArrayList<>();
+        List<String> lines = new ArrayList<>();
+ 
+        try (BufferedReader br = new BufferedReader(new FileReader(paresFile))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                lines.add(line);
+            }
+        } catch (IOException e) {
+            logger.error("文件读取异常: {}", e);
+        }
+
+        // 解析从gitee仓拿到的ts
+        Map<String, String> map = Map.of("NAME", "title", "DESC", "textContent");
+        Map<String, Object> resMap = new HashMap<>();
+        String langFlag = "";
+        for (String line : lines) {
+            line = line.trim();
+            int preLength = line.indexOf(":");
+            if (preLength == -1) continue;
+            String keyString = line.substring(0, preLength);
+            if ("zh".equals(keyString) || "en".equals(keyString)) langFlag = keyString;
+            String valueString = line.substring(preLength + 1, line.length()).trim();
+
+            if (resMap.containsKey(keyString)) {
+                resMap.put("lang", langFlag);
+                if ("download-commercial-release".equals(paresFile.getName())) {
+                    resMap.put("path", "/" + langFlag + "download/commercial-release/");
+                } else {
+                    resMap.put("path", "/" + langFlag + "download/archive/detail?version=" +  resMap.get("title"));
+                }
+                resMap.put("type", "release");
+                resList.add(resMap);
+                if ("download-commercial-release".equals(paresFile.getName())) {
+                    Map<String, Object> resCommercialMap = new HashMap<>();
+                    resCommercialMap.put("type", "commercialRelease");
+                    resList.add(resCommercialMap);
+                }
+                resMap = new HashMap<>();
+            } else if (map.containsKey(keyString)) {
+                resMap.put(map.get(keyString), valueString);
+            }
+        }
+        if (resMap.size() > 0) {
+            resMap.put("lang", langFlag);
+            if ("download-commercial-release".equals(paresFile.getName())) {
+                resMap.put("path", "/" + langFlag + "download/commercial-release/");
+            } else {
+                resMap.put("path", "/" + langFlag + "download/archive/detail?version=" + resMap.get("title"));
+            }
+            resMap.put("type", "release");
+            resList.add(resMap);
+            if ("download-commercial-release".equals(paresFile.getName())) {
+                Map<String, Object> resCommercialMap = new HashMap<>();
+                resCommercialMap.put("type", "commercialRelease");
+                resList.add(resCommercialMap);
+            }
+            resList.add(resMap);
+        }
+
+        //请求接口拿到软件包具体内容
+        String countString = getHttpResponse(releasePath,"GET",null,null);
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            JsonNode countNode = mapper.readTree(countString);
+            if (countNode.get("RepoVersion") != null && countNode.get("RepoVersion").isArray()) {
+                for (JsonNode versionNode : countNode.get("RepoVersion")) {
+                    String version = versionNode.get("Version").asText();
+                    String mirroString = getHttpResponse(releasePath + version + "/", "GET", null, null);
+                    resList.addAll(praseCommunityReleaseJson(mirroString));
+                }
+            } else {
+                logger.warn("RepoVersion field is missing or not an array.");
+            }
+
+        } catch (Exception e) {
+            logger.error("Error processing HTTP response or JSON parsing: {}", e);
+        }
+        return resList;
+    }
+
+    public static List<Map<String, Object>> praseCommunityReleaseJson(String jsonString) {
+        ObjectMapper mapper = new ObjectMapper();
+        List<Map<String, Object>> resList = new ArrayList<>();
+        try {
+            JsonNode mirrorNode = mapper.readTree(jsonString);
+            if (mirrorNode.get("FileTree") != null && mirrorNode.get("FileTree").isArray()) {
+                for(JsonNode FileTreeNode : mirrorNode.get("FileTree")) {
+                    String arch = FileTreeNode.get("Arch").asText();
+                    String scenario = FileTreeNode.get("Scenario").asText();
+                    for (JsonNode TreeNode : FileTreeNode.get("Tree")) {
+                        Map<String, Object> resMapZh = new HashMap<>();
+                        resMapZh.put("arch", arch);
+                        resMapZh.put("scenario", scenario);
+                        resMapZh.put("title", TreeNode.get("Name").asText());
+                        resMapZh.put("path", TreeNode.get("Path").asText());
+                        resMapZh.put("textContent",""); // 可以为空吗?
+                        resMapZh.put("lang","zh");
+                        resList.add(resMapZh);
+                        Map<String, Object> resMapEn = new HashMap<>(resMapZh);
+                        resMapEn.put("lang", "en");
+                        resList.add(resMapEn);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("JSON parsing: {}", e);
+        }
+        return resList;
     }
 }
