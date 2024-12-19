@@ -80,7 +80,7 @@ public class Parse {
             }
 
         }
-        if (type.equals(OTHER) || type.equals(SHOWCASE) || type.equals(MIGRATION)) {
+        if (type.equals(OTHER)  || type.equals(MIGRATION)) {
             path = path.substring(0, path.length() - 5);
         }
         Map<String, Object> jsonMap = new HashMap<>();
