@@ -1,19 +1,35 @@
-import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import etherpad.EPLiteClient;
+
 public class App {
     private static final String TARGET = System.getenv("TARGET");
+
+    private static final String TARGET_SIG = System.getenv("TARGET") + "/sig";
+
+    private static final String TARGET_RELEASE = System.getenv("TARGET") + "/release";
 
     private static final String APPLICATION_PATH = System.getenv("APPLICATION_PATH");
 
     private static final String MAPPING_PATH = System.getenv("MAPPING_PATH");
 
+    private static final String SIG_PATH = System.getenv("SIG_PATH");
+
+    private static final String ETHERPAD_PATH = System.getenv("ETHERPAD_PATH");
+
     private static final String INDEX_PREFIX = "openeuler_articles";
+
+    private static final String ETHERPAD_URL = System.getenv("ETHERPAD_URL");
+
+    private static final String ETHERPAD_KEY = System.getenv("ETHERPAD_KEY");
+
+    private static final String RELEASE_PATH = System.getenv("RELEASE_PATH");
 
     private static final Logger logger = LoggerFactory.getLogger(App.class);
 
@@ -22,6 +38,9 @@ public class App {
             PublicClient.CreateClientFormConfig(APPLICATION_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_zh", MAPPING_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_en", MAPPING_PATH);
+            sigData();
+            etherpadData();
+            releaseData();
             fileDate();
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -29,7 +48,105 @@ public class App {
         }
 
         logger.info("import end");
-        System.exit(0);
+    }
+
+    public static void sigData() throws Exception {
+        File indexFile = new File(TARGET_SIG);
+        if (!indexFile.exists()) {
+            logger.info("%s folder does not exist%n", indexFile.getPath());
+            return;
+        }
+
+        logger.info("begin to update sig data");
+        Collection<File> listFiles = new ArrayList<>();
+        File[] subdirectories = indexFile.listFiles((dir, name) -> new File(dir, name).isDirectory());
+        if (subdirectories != null) {
+            for (File subdir : subdirectories) {
+                Collection<File> filesInSubdirectory = FileUtils.listFiles(subdir, new String[]{"yaml"}, false);
+                listFiles.addAll(filesInSubdirectory);
+            }
+        } else {
+            logger.info("sig data is null");
+            return;
+        }
+
+        for (File paresFile : listFiles) {
+            try {
+                // sig information has two language
+                Map<String, Object> escape = Parse.parseSigYaml(paresFile, "zh", SIG_PATH);
+                if (null != escape) {
+                    PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                } else {
+                    logger.info("parse null : " + paresFile.getPath());
+                }
+            } catch (Exception e) {
+                logger.error(paresFile.getPath());
+                logger.error("sig data imported error {}", e.getMessage());
+            }
+        }
+        logger.info("sig data imported end");
+    }
+
+    public static void etherpadData(){
+        EPLiteClient client = new EPLiteClient(ETHERPAD_URL, ETHERPAD_KEY);
+
+        Map result = client.listAllPads();
+        List padIds = (List) result.get("padIDs");
+
+        logger.info("begin to update etherpad data");
+        for(Object padId : padIds) {
+            Map<String, Object> resMap = client.getText((String) padId);
+            if(resMap.containsKey("text")) {
+                try {
+                    Map<String, Object> escape = Parse.parseEtherPad(resMap.get("text"), padId.toString(), ETHERPAD_PATH);
+                    if (null != escape) {
+                        PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                    }
+                } catch (Exception e) {
+                    logger.error("etherpad data imported error {}", e.getMessage());
+                }
+            }
+        }
+        logger.info("etherpad data imported end");
+    }
+
+    public static void releaseData() {
+        File indexFile = new File(TARGET_RELEASE);
+        if (!indexFile.exists()) {
+            logger.info("%s folder does not exist%n", indexFile.getPath());
+            return;
+        }
+
+        logger.info("begin to update release data");
+        Collection<File> listFiles = FileUtils.listFiles(indexFile, new String[]{"ts"}, true);
+        for (File paresFile : listFiles) {
+            try {
+                List<Map<String, Object>> escapes = Parse.parseReleaseDataOnGitee(paresFile);
+                if (null != escapes) {
+                    for (Map<String, Object> escape : escapes) {
+                        PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                    }
+                } else {
+                    logger.info("parse null : " + paresFile.getPath());
+                }
+            } catch (Exception e) {
+                logger.error(paresFile.getPath());
+                logger.error("release data imported error on gitee: {}", e.getMessage());
+            }
+        }
+        try {
+            List<Map<String, Object>> escapes = Parse.parseReleaseDataOnMirror(RELEASE_PATH);
+            if (null != escapes) {
+                for (Map<String, Object> escape : escapes) {
+                    PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                }
+            } else {
+                logger.info("parse null : " + RELEASE_PATH);
+            }
+        } catch (Exception e) {
+            logger.error("release data imported error on port: {}", e.getMessage());
+        }
+        logger.info("release data imported end");
     }
 
     public static void fileDate() throws Exception {
