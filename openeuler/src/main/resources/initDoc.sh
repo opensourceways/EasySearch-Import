@@ -36,6 +36,7 @@ cd ${SOURCE}/openEuler-portal
 cp -r ${SOURCE}/openEuler-portal/app/.vitepress/dist/zh ${TARGET}/
 cp -r ${SOURCE}/openEuler-portal/app/.vitepress/dist/en ${TARGET}/
 cp -r ${SOURCE}/openEuler-portal/app/.vitepress/dist/ru ${TARGET}/
+cp -r ${SOURCE}/openEuler-portal/app/.vitepress/src/data/download ${TARGET}/release/
 
 
 rm -rf ${TARGET}/zh/blog

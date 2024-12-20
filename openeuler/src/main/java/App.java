@@ -13,6 +13,8 @@ public class App {
 
     private static final String TARGET_SIG = System.getenv("TARGET") + "/sig";
 
+    private static final String TARGET_RELEASE = System.getenv("TARGET") + "/release";
+
     private static final String APPLICATION_PATH = System.getenv("APPLICATION_PATH");
 
     private static final String MAPPING_PATH = System.getenv("MAPPING_PATH");
@@ -27,6 +29,8 @@ public class App {
 
     private static final String ETHERPAD_KEY = System.getenv("ETHERPAD_KEY");
 
+    private static final String RELEASE_PATH = System.getenv("RELEASE_PATH");
+
     private static final Logger logger = LoggerFactory.getLogger(App.class);
 
     public static void main(String[] args) {
@@ -36,6 +40,7 @@ public class App {
             PublicClient.makeIndex(INDEX_PREFIX + "_en", MAPPING_PATH);
             sigData();
             etherpadData();
+            releaseData();
             fileDate();
         } catch (Exception e) {
             logger.error(e.getMessage());
@@ -66,19 +71,19 @@ public class App {
         }
 
         for (File paresFile : listFiles) {
-                try {
-                    // sig information has two language
-                    Map<String, Object> escape = Parse.parseSigYaml(paresFile, "zh", SIG_PATH);
-                    if (null != escape) {
-                        PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
-                    } else {
-                        logger.info("parse null : " + paresFile.getPath());
-                    }
-                } catch (Exception e) {
-                    logger.error(paresFile.getPath());
-                    logger.error("sig data imported error {}", e.getMessage());
+            try {
+                // sig information has two language
+                Map<String, Object> escape = Parse.parseSigYaml(paresFile, "zh", SIG_PATH);
+                if (null != escape) {
+                    PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                } else {
+                    logger.info("parse null : " + paresFile.getPath());
                 }
+            } catch (Exception e) {
+                logger.error(paresFile.getPath());
+                logger.error("sig data imported error {}", e.getMessage());
             }
+        }
         logger.info("sig data imported end");
     }
 
@@ -103,6 +108,45 @@ public class App {
             }
         }
         logger.info("etherpad data imported end");
+    }
+
+    public static void releaseData() {
+        File indexFile = new File(TARGET_RELEASE);
+        if (!indexFile.exists()) {
+            logger.info("%s folder does not exist%n", indexFile.getPath());
+            return;
+        }
+
+        logger.info("begin to update release data");
+        Collection<File> listFiles = FileUtils.listFiles(indexFile, new String[]{"ts"}, true);
+        for (File paresFile : listFiles) {
+            try {
+                List<Map<String, Object>> escapes = Parse.parseReleaseDataOnGitee(paresFile);
+                if (null != escapes) {
+                    for (Map<String, Object> escape : escapes) {
+                        PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                    }
+                } else {
+                    logger.info("parse null : " + paresFile.getPath());
+                }
+            } catch (Exception e) {
+                logger.error(paresFile.getPath());
+                logger.error("release data imported error on gitee: {}", e.getMessage());
+            }
+        }
+        try {
+            List<Map<String, Object>> escapes = Parse.parseReleaseDataOnMirror(RELEASE_PATH);
+            if (null != escapes) {
+                for (Map<String, Object> escape : escapes) {
+                    PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                }
+            } else {
+                logger.info("parse null : " + RELEASE_PATH);
+            }
+        } catch (Exception e) {
+            logger.error("release data imported error on port: {}", e.getMessage());
+        }
+        logger.info("release data imported end");
     }
 
     public static void fileDate() throws Exception {
