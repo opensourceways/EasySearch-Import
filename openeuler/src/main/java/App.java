@@ -51,8 +51,10 @@ public class App {
                 try {
                     Map<String, Object> escape = Parse.parse(paresFile);
                     if (null != escape) {
+
                         inserDataList.add(escape);
                         idSet.add((String) escape.get("path"));
+
                     } else {
                         logger.info("parse null : " + paresFile.getPath());
                     }
