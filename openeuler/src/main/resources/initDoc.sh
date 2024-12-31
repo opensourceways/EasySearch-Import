@@ -9,6 +9,7 @@ mkdir -p ${SOURCE}
 cd ${SOURCE}
 git clone https://gitee.com/openeuler/openEuler-portal.git
 git clone https://gitee.com/openeuler/docs.git
+git clone https://gitee.com/openeuler/community.git
 # shellcheck disable=SC2164
 cd openEuler-portal
 pnpm install
@@ -17,6 +18,12 @@ pnpm build
 mkdir -p ${TARGET}/zh/
 mkdir -p ${TARGET}/en/
 mkdir -p ${TARGET}/ru/
+mkdir -p ${TARGET}/sig/
+
+if [ ! -d ${SOURCE}/community ]; then
+ rm -rf ${TARGET}
+ exit
+fi
 
 if [ ! -d ${SOURCE}/openEuler-portal ]; then
  rm -rf ${TARGET}
@@ -29,6 +36,7 @@ cd ${SOURCE}/openEuler-portal
 cp -r ${SOURCE}/openEuler-portal/app/.vitepress/dist/zh ${TARGET}/
 cp -r ${SOURCE}/openEuler-portal/app/.vitepress/dist/en ${TARGET}/
 cp -r ${SOURCE}/openEuler-portal/app/.vitepress/dist/ru ${TARGET}/
+cp -r ${SOURCE}/openEuler-portal/app/.vitepress/src/data/download ${TARGET}/release/
 
 
 rm -rf ${TARGET}/zh/blog
@@ -81,6 +89,9 @@ do
   cp -r ${SOURCE}/docs/docs/zh/docs/* ${TARGET}/zh/docs/$b/docs/
   cp -r ${SOURCE}/docs/docs/en/docs/* ${TARGET}/en/docs/$b/docs/
 done
+
+cd ${SOURCE}/community
+cp -r ${SOURCE}/community/sig/* ${TARGET}/sig/
 
 
 
