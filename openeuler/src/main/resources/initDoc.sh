@@ -10,6 +10,7 @@ cd ${SOURCE}
 git clone https://gitee.com/openeuler/openEuler-portal.git
 git clone https://gitee.com/openeuler/docs.git
 git clone https://gitee.com/openeuler/community.git
+git clone -b search-refactor https://gitee.com/haml/openEuler-portal_sig.git
 # shellcheck disable=SC2164
 cd openEuler-portal
 pnpm install
@@ -19,6 +20,8 @@ mkdir -p ${TARGET}/zh/
 mkdir -p ${TARGET}/en/
 mkdir -p ${TARGET}/ru/
 mkdir -p ${TARGET}/sig/
+mkdir -p ${TARGET}/aggregate/
+
 
 if [ ! -d ${SOURCE}/community ]; then
  rm -rf ${TARGET}
@@ -93,6 +96,11 @@ done
 cd ${SOURCE}/community
 cp -r ${SOURCE}/community/sig/* ${TARGET}/sig/
 
+cd ${SOURCE}/openEuler-portal_sig
+# cp -r ${SOURCE}/openEuler-portal/app/.vitepress/src-new/data/download/get-os/index.ts ${TARGET}/aggregate/
+# cp -r ${SOURCE}/openEuler-portal/app/.vitepress/src-new/i18n/downloaddownload-zh.ts ${TARGET}/aggregate/
+cp -r ${SOURCE}/openEuler-portal_sig/app/.vitepress/src-new/data/download/get-os/index.ts ${TARGET}/aggregate/
+cp -r ${SOURCE}/openEuler-portal_sig/app/.vitepress/src-new/i18n/download/download-zh.ts ${TARGET}/aggregate/
 
 
 

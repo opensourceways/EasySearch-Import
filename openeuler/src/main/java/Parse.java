@@ -19,7 +19,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -27,6 +29,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
@@ -160,6 +164,11 @@ public final class Parse {
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Parse.class);
 
+    /**
+     * HashSet to store sig name.
+     */
+    private static HashSet<Object> sigSet = new HashSet<>();
+
     private Parse() {
     }
 
@@ -196,7 +205,7 @@ public final class Parse {
             }
 
         }
-        if (type.equals(OTHER) || type.equals(SHOWCASE) || type.equals(MIGRATION)) {
+        if (type.equals(OTHER) || type.equals(MIGRATION)) {
             path = path.substring(0, path.length() - 5);
         }
         Map<String, Object> jsonMap = new HashMap<>();
@@ -956,18 +965,19 @@ public final class Parse {
      *
      * @param paresFile The YAML file to parse.
      * @param lang The language code to influence parsing behavior.
-     * @param sigPath The path within the YAML file to the signature-related data.
      * @return A map containing the parsed signature data.
      */
-    public static Map<String, Object> parseSigYaml(File paresFile, String lang, String sigPath) throws Exception {
+    public static Map<String, Object> parseSigYaml(File paresFile, String lang) throws Exception {
             Yaml yaml = new Yaml();
             Map<String, Object> resMap = new HashMap<>();
+
             try (InputStream inputStream = new FileInputStream(paresFile)) {
                 Map<String, Object> dataMap = yaml.load(inputStream);
                 resMap.put("title", dataMap.get("name"));
+                sigSet.add(dataMap.get("name"));
                 resMap.put("lang", lang);
                 resMap.put("type", "sig");
-                String path = sigPath + lang + "/sig/" + dataMap.get("name");
+                String path = lang + "/sig/" + dataMap.get("name");
                 resMap.put("path", path);
                 String textContent = "maintainers: ";
                 if (dataMap.containsKey("maintainers") && dataMap.get("maintainers") instanceof List) {
@@ -1016,12 +1026,17 @@ public final class Parse {
      */
     public static Map<String, Object> parseEtherPad(Object text, String padId, String etherpadPath) {
         Map<String, Object> resMap = new HashMap<>();
-        resMap.put("textContent", text.toString());
-        resMap.put("title", padId);
-        resMap.put("path", etherpadPath + "p/" +  padId);
-        resMap.put("lang", "zh");
-        resMap.put("type", "etherpad");
-        return resMap;
+        for (Object prefix : sigSet) {
+            if (padId.equals(prefix.toString() + "-meetings")) {
+                resMap.put("textContent", text.toString());
+                resMap.put("title", padId);
+                resMap.put("path", etherpadPath + "p/" +  padId);
+                resMap.put("lang", "zh");
+                resMap.put("type", "etherpad");
+                return resMap;
+            }
+        }
+        return null;
     }
 
     /**
@@ -1067,9 +1082,10 @@ public final class Parse {
             if (resMap.containsKey(map.get(keyString))) {
                 resMap.put("lang", langFlag);
                 if ("download-commercial-release.ts".equals(paresFile.getName())) {
-                    resMap.put("path", langFlag + "/download/commercial-release/" + resMap.get("title"));
+                    resMap.put("path", langFlag + "/download/commercial-release/?search=" + resMap.get("title"));
                 } else if ("download.ts".equals(paresFile.getName())) {
                     resMap.put("path", langFlag + "/download/archive/detail?version=" +  resMap.get("title"));
+                    resMap.put("version", resMap.get("title"));
                 } else {
                     LOGGER.warn("file name changed");
                     return resList;
@@ -1090,7 +1106,7 @@ public final class Parse {
         if (resMap.size() > 0) {
             resMap.put("lang", langFlag);
             if ("download-commercial-release.ts".equals(paresFile.getName())) {
-                resMap.put("path", langFlag + "/download/commercial-release/" + resMap.get("title"));
+                resMap.put("path", langFlag + "/download/commercial-release/?search=" + resMap.get("title"));
             } else if ("download.ts".equals(paresFile.getName())) {
                 resMap.put("path", langFlag + "/download/archive/detail?version=" + resMap.get("title"));
             }
@@ -1122,7 +1138,7 @@ public final class Parse {
                 for (JsonNode versionNode : countNode.get("RepoVersion")) {
                     String version = versionNode.get("Version").asText();
                     String mirrorString = getHttpResponse(releasePath + version + "/", "GET", null, null);
-                    resList.addAll(praseCommunityReleaseJson(mirrorString, repoPath));
+                    resList.addAll(praseCommunityReleaseJson(mirrorString, repoPath, version));
                 }
             } else {
                 LOGGER.warn("RepoVersion field is missing or not an array.");
@@ -1139,9 +1155,11 @@ public final class Parse {
      *
      * @param jsonString The json string of the release data to be parsed.
      * @param repoPath The path of the repo to be parsed.
+     * @param version The version of the repo to insert to map.
      * @return A list of maps where contains its attributes as key-value pairs.
      */
-    public static List<Map<String, Object>> praseCommunityReleaseJson(String jsonString, String repoPath) {
+    public static List<Map<String, Object>> praseCommunityReleaseJson(
+        String jsonString, String repoPath, String version) {
         ObjectMapper mapper = new ObjectMapper();
         List<Map<String, Object>> resList = new ArrayList<>();
         try {
@@ -1155,10 +1173,11 @@ public final class Parse {
                         resMapZh.put("arch", arch);
                         resMapZh.put("scenario", scenario);
                         resMapZh.put("title", treeNode.get("Name").asText());
-                        resMapZh.put("path", treeNode.get("Path").asText());
+                        resMapZh.put("path", repoPath + treeNode.get("Path").asText());
                         resMapZh.put("textContent", "");
                         resMapZh.put("lang", "zh");
                         resMapZh.put("type", "communityRelease");
+                        resMapZh.put("version", version);
                         resList.add(resMapZh);
                         Map<String, Object> resMapEn = new HashMap<>(resMapZh);
                         resMapEn.put("lang", "en");
@@ -1170,5 +1189,69 @@ public final class Parse {
             LOGGER.error("JSON parsing: {}", e);
         }
         return resList;
+    }
+
+    /**
+     * Parses aggregate release data as a map.
+     *
+     * @param files The ts file of the aggregate release data to be parsed.
+     * @return A list of maps where contains its attributes as key-value pairs.
+     */
+    public static Map<String, Object> parseAggreReleaseData(Collection<File> files) {
+        Map<String, Object> resMap = new HashMap<>();
+        resMap.put("title", "下载中心");
+        resMap.put("lang", "zh");
+        resMap.put("path", "zh/download/");
+        resMap.put("type", "aggre");
+        String textContent = "Offline Standard ISO, Offline Everything ISO, Network Install ISO";
+        for (File file : files) {
+            HashSet<String> tags = null;
+            if ("download-zh.ts".equals(file.getName())) {
+                tags = Stream.of("community", "communityIntro", "SERVER_IMAGE", "CLOUD_IMAGE",
+                "EDGE_IMAGE", "EMBEDDEN_IMAGE", "INSTALL_GUIDENCE", "DETAIL1", "SCENARIOS", "ARCHITECTUREList")
+                .collect(Collectors.toCollection(HashSet::new));
+            } else {
+                tags = Stream.of("title", "intro", "label")
+                .collect(Collectors.toCollection(HashSet::new));
+            }
+            textContent = textContent + parseTsAsTxt(file, tags);
+        }
+        resMap.put("textContent", textContent);
+        return resMap;
+    }
+
+    /**
+     * Parses ts data in file as a string by hashset.
+     *
+     * @param file The ts file of the aggregate release data to be parsed.
+     * @param hashSet The hashset to be taged.
+     * @return A string as textContext.
+     */
+    public static String parseTsAsTxt(File file, HashSet<String> hashSet) {
+        String resString = "";
+        List<String> lines = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(
+                new FileInputStream(file), "UTF-8"))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                lines.add(line);
+            }
+        } catch (IOException e) {
+            LOGGER.error("文件读取异常: {}", e);
+        }
+
+        for (String line : lines) {
+            int index = line.indexOf(":");
+            if (index == -1) {
+                continue;
+            }
+            String key = line.substring(0, index).trim();
+            line = line.substring(index + 1).trim();
+            if (hashSet.contains(key)) {
+                resString = resString + line;
+            }
+        }
+        return resString;
     }
 }
