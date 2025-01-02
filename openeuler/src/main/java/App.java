@@ -103,6 +103,7 @@ public final class App {
         }
 
         LOGGER.info("import end");
+        System.exit(0);
     }
 
     /**
@@ -133,9 +134,13 @@ public final class App {
         for (File paresFile : listFiles) {
             try {
                 // sig information has two language
-                Map<String, Object> escape = Parse.parseSigYaml(paresFile, "zh");
-                if (null != escape) {
-                    PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                List<Map<String, Object>> escapes = new ArrayList<>();
+                escapes.add(Parse.parseSigYaml(paresFile, "zh"));
+                escapes.add(Parse.parseSigYaml(paresFile, "en"));
+                if (null != escapes) {
+                    for (Map<String, Object> escape : escapes) {
+                        PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                    }
                 } else {
                     LOGGER.info("parse null : " + paresFile.getPath());
                 }
