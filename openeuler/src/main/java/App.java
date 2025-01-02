@@ -103,6 +103,7 @@ public final class App {
         }
 
         LOGGER.info("import end");
+        System.exit(0);
     }
 
     /**
