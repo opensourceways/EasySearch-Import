@@ -295,7 +295,9 @@ public final class App {
             String[] split = key.split("#");
             String type = split[0];
             String lang = split[1];
-            PublicClient.deleteByType(INDEX_PREFIX + "_" + lang, type);
+            if (!"aggre".equals(type)) {
+                PublicClient.deleteByType(INDEX_PREFIX + "_" + lang, type);
+            }
             for (Map<String, Object> lm : stringListEntry.getValue()) {
                 try {
                     PublicClient.insert(lm, INDEX_PREFIX + "_" + lm.get("lang"));
