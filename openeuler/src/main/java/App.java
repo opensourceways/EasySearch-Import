@@ -93,10 +93,10 @@ public final class App {
             PublicClient.CreateClientFormConfig(APPLICATION_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_zh", MAPPING_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_en", MAPPING_PATH);
+            fileDate();
             sigData();
             etherpadData();
             releaseData();
-            fileDate();
         } catch (Exception e) {
             LOGGER.error(e.getMessage());
             LOGGER.error(e.toString());
@@ -267,10 +267,8 @@ public final class App {
                 try {
                     Map<String, Object> escape = Parse.parse(paresFile);
                     if (null != escape) {
-                        if (!"packages".equals(escape.get("type"))) {
                             inserDataList.add(escape);
                             idSet.add((String) escape.get("path"));
-                        }
                     } else {
                         LOGGER.info("parse null : " + paresFile.getPath());
                     }
