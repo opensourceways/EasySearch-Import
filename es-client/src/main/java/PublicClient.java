@@ -124,6 +124,11 @@ public class PublicClient {
         IndexResponse indexResponse = restHighLevelClient.index(indexRequest, RequestOptions.DEFAULT);
     }
 
+    public static void insertByType(Map<String, Object> data, String index, String type) throws Exception {
+        IndexRequest indexRequest = new IndexRequest(index).id((String) data.get("path") + "/" + type).source(data);
+        IndexResponse indexResponse = restHighLevelClient.index(indexRequest, RequestOptions.DEFAULT);
+    }
+
     public static void deleteExpired(Set<String> idSet, String index) {
         try {
             int scrollSize = 500;//一次读取的doc数量
