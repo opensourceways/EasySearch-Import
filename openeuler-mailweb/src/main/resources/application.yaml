@@ -1,0 +1,21 @@
+spring:
+  application:
+    name:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: j
+    username:
+    password:
+
+
+elasticsearch:
+  url:
+  username:
+  password:
+  index:
+
+logging:
+  level:
+    com.openeuler.collect: info
+
+
