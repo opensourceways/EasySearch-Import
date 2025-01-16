@@ -203,7 +203,6 @@ public final class Parse {
             if (!fileName.equals("index.html")) {
                 return null;
             }
-
         }
         if (type.equals(OTHER) || type.equals(MIGRATION)) {
             path = path.substring(0, path.length() - 5);
@@ -370,11 +369,19 @@ public final class Parse {
             LOGGER.info("setForum success");
             countDownLatch.countDown();
         });
+        formThread.setUncaughtExceptionHandler((thread, throwable) -> {
+            LOGGER.error("Uncaught exception in thread: " + thread.getName(), throwable);
+            countDownLatch.countDown();
+        });
         Thread serviceThread = new Thread(() -> {
             if (!setService(r)) {
                 LOGGER.error("Failed to add service data");
             }
             LOGGER.info("setService success");
+            countDownLatch.countDown();
+        });
+        serviceThread.setUncaughtExceptionHandler((thread, throwable) -> {
+            LOGGER.error("Uncaught exception in thread: " + thread.getName(), throwable);
             countDownLatch.countDown();
         });
         Thread whitepaperThread = new Thread(() -> {
@@ -384,6 +391,10 @@ public final class Parse {
             LOGGER.info("setWhitepaperData success");
             countDownLatch.countDown();
         });
+        whitepaperThread.setUncaughtExceptionHandler((thread, throwable) -> {
+            LOGGER.error("Uncaught exception in thread: " + thread.getName(), throwable);
+            countDownLatch.countDown();
+        });
         Thread giteeDataThread = new Thread(() -> {
             if (!setGiteeData(r)) {
                 LOGGER.error("Failed to add setGitee data");
@@ -391,11 +402,19 @@ public final class Parse {
             LOGGER.info("setGiteeData success");
             countDownLatch.countDown();
         });
+        giteeDataThread.setUncaughtExceptionHandler((thread, throwable) -> {
+            LOGGER.error("Uncaught exception in thread: " + thread.getName(), throwable);
+            countDownLatch.countDown();
+        });
         Thread packageThread = new Thread(() -> {
             if (!setPackageManagementData(r)) {
                 LOGGER.error("Failed to add setPackageManagementData data");
             }
             LOGGER.info("setPackageManagementData success");
+            countDownLatch.countDown();
+        });
+        packageThread.setUncaughtExceptionHandler((thread, throwable) -> {
+            LOGGER.error("Uncaught exception in thread: " + thread.getName(), throwable);
             countDownLatch.countDown();
         });
         formThread.start();
@@ -604,10 +623,11 @@ public final class Parse {
     public static byte[] downloadFileByURL(String fileURL) throws IOException {
         URL url = new URL(fileURL);
         URLConnection conn = url.openConnection();
-        InputStream in = conn.getInputStream();
-        byte[] bytes = in.readAllBytes();
-        in.close();
-        return bytes;
+        try (InputStream in = conn.getInputStream()) {
+            byte[] bytes = in.readAllBytes();
+            in.close();
+            return bytes;
+        }
     }
 
     /**
@@ -1060,7 +1080,7 @@ public final class Parse {
         }
 
         // 解析从gitee仓拿到的ts文件
-        Map<String, String> map = Map.of("NAME", "title", "DESC", "textContent");
+        Map<String, String> map = Map.of("NAME", "title", "DESC", "textContent", "PUBLISH_DATE", "date");
         Map<String, Object> resMap = new HashMap<>();
         String langFlag = "";
         for (String line : lines) {
@@ -1100,6 +1120,13 @@ public final class Parse {
                 resMap = new HashMap<>();
                 resMap.put(map.get(keyString), valueString);
             } else if (map.containsKey(keyString)) {
+                if ("date".equals(map.get(keyString))) {
+                    valueString = valueString.replaceAll("/", "-");
+                    String[] parts = valueString.split("-");
+                    if (parts.length - 1 == 1) {
+                        valueString += "-01";
+                    }
+                }
                 resMap.put(map.get(keyString), valueString);
             }
         }
@@ -1109,6 +1136,7 @@ public final class Parse {
                 resMap.put("path", langFlag + "/download/commercial-release/?search=" + resMap.get("title"));
             } else if ("download.ts".equals(paresFile.getName())) {
                 resMap.put("path", langFlag + "/download/archive/detail?version=" + resMap.get("title"));
+                resMap.put("version", resMap.get("title"));
             }
             resMap.put("type", "release");
             resList.add(resMap);
