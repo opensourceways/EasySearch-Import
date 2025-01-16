@@ -31,6 +31,11 @@ public final class App {
     private static final String TARGET_RELEASE = System.getenv("TARGET") + "/release";
 
     /**
+     *Target aggregate file route.
+     */
+    private static final String TARGET_AGGREGATE = System.getenv("TARGET") + "/aggregate";
+
+    /**
      *Application path.
      */
     private static final String APPLICATION_PATH = System.getenv("APPLICATION_PATH");
@@ -39,11 +44,6 @@ public final class App {
      *Mapping path of es.
      */
     private static final String MAPPING_PATH = System.getenv("MAPPING_PATH");
-
-    /**
-     *Sig data path prefix.
-     */
-    private static final String SIG_PATH = System.getenv("SIG_PATH");
 
     /**
      *Etherpad data path prefix.
@@ -93,16 +93,17 @@ public final class App {
             PublicClient.CreateClientFormConfig(APPLICATION_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_zh", MAPPING_PATH);
             PublicClient.makeIndex(INDEX_PREFIX + "_en", MAPPING_PATH);
+            fileDate();
             sigData();
             etherpadData();
             releaseData();
-            fileDate();
         } catch (Exception e) {
             LOGGER.error(e.getMessage());
             LOGGER.error(e.toString());
         }
 
         LOGGER.info("import end");
+        System.exit(0);
     }
 
     /**
@@ -133,9 +134,13 @@ public final class App {
         for (File paresFile : listFiles) {
             try {
                 // sig information has two language
-                Map<String, Object> escape = Parse.parseSigYaml(paresFile, "zh", SIG_PATH);
-                if (null != escape) {
-                    PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                List<Map<String, Object>> escapes = new ArrayList<>();
+                escapes.add(Parse.parseSigYaml(paresFile, "zh"));
+                escapes.add(Parse.parseSigYaml(paresFile, "en"));
+                if (null != escapes) {
+                    for (Map<String, Object> escape : escapes) {
+                        PublicClient.insert(escape, INDEX_PREFIX + "_" + escape.get("lang"));
+                    }
                 } else {
                     LOGGER.info("parse null : " + paresFile.getPath());
                 }
@@ -217,7 +222,25 @@ public final class App {
         } catch (Exception e) {
             LOGGER.error("release data imported error on port: {}", e.getMessage());
         }
-        LOGGER.info("release data imported end");
+
+        File aggreFile = new File(TARGET_AGGREGATE);
+        if (!indexFile.exists()) {
+            LOGGER.info("%s folder does not exist%n", indexFile.getPath());
+            return;
+        }
+
+        Collection<File> files = FileUtils.listFiles(aggreFile, new String[]{"ts"}, true);
+        try {
+            Map<String, Object> escape = Parse.parseAggreReleaseData(files);
+            if (null != escape) {
+                PublicClient.insertByType(escape, INDEX_PREFIX + "_" + escape.get("lang"), (String) escape.get("type"));
+            } else {
+                LOGGER.info("parse null :" + aggreFile.getPath());
+            }
+        } catch (Exception e) {
+            LOGGER.error("aggregate release data imported error: {}", e.getMessage());
+        }
+        LOGGER.info("all release data imported end");
     }
 
     /**
@@ -244,8 +267,8 @@ public final class App {
                 try {
                     Map<String, Object> escape = Parse.parse(paresFile);
                     if (null != escape) {
-                        inserDataList.add(escape);
-                        idSet.add((String) escape.get("path"));
+                            inserDataList.add(escape);
+                            idSet.add((String) escape.get("path"));
                     } else {
                         LOGGER.info("parse null : " + paresFile.getPath());
                     }

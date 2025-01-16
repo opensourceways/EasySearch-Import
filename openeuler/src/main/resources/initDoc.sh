@@ -19,6 +19,8 @@ mkdir -p ${TARGET}/zh/
 mkdir -p ${TARGET}/en/
 mkdir -p ${TARGET}/ru/
 mkdir -p ${TARGET}/sig/
+mkdir -p ${TARGET}/aggregate/
+
 
 if [ ! -d ${SOURCE}/community ]; then
  rm -rf ${TARGET}
@@ -93,6 +95,9 @@ done
 cd ${SOURCE}/community
 cp -r ${SOURCE}/community/sig/* ${TARGET}/sig/
 
+cd ${SOURCE}/openEuler-portal
+cp -r ${SOURCE}/openEuler-portal/app/.vitepress/src-new/data/download/get-os/index.ts ${TARGET}/aggregate/
+cp -r ${SOURCE}/openEuler-portal/app/.vitepress/src-new/i18n/download/download-zh.ts ${TARGET}/aggregate/
 
 
 
