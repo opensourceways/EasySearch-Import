@@ -20,6 +20,7 @@ mkdir -p ${TARGET}/en/
 mkdir -p ${TARGET}/ru/
 mkdir -p ${TARGET}/sig/
 mkdir -p ${TARGET}/aggregate/
+mkdir -p ${TARGET}/release/
 
 
 if [ ! -d ${SOURCE}/community ]; then
@@ -38,7 +39,7 @@ cd ${SOURCE}/openEuler-portal
 cp -r ${SOURCE}/openEuler-portal/app/.vitepress/dist/zh ${TARGET}/
 cp -r ${SOURCE}/openEuler-portal/app/.vitepress/dist/en ${TARGET}/
 cp -r ${SOURCE}/openEuler-portal/app/.vitepress/dist/ru ${TARGET}/
-cp -r ${SOURCE}/openEuler-portal/app/.vitepress/src/data/download ${TARGET}/release/
+cp -r ${SOURCE}/openEuler-portal/app/.vitepress/src-new/data/download ${TARGET}/release/
 
 
 rm -rf ${TARGET}/zh/blog

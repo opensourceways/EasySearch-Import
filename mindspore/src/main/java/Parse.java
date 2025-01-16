@@ -12,6 +12,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -23,12 +25,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+
+
 public class Parse {
 
     private static final String BASEPATH = System.getenv("TARGET") + "/";
     private static final String LANG_EN = "/en/";
     private static final String LANG_ZH = "/zh-CN/";
     private static final String MINDSPORE_OFFICIAL = System.getenv("MINDSPORE_OFFICIAL");
+
+    /**
+     * Logger for logging messages in Parse class.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(Parse.class);
 
     private static final HashMap<String, String> COMPONENTS_MAP = new HashMap<>() {{
         put("docs", "MindSpore");
@@ -538,9 +547,12 @@ public class Parse {
         connection.setUseCaches(false);
         connection.setDoInput(true);
         connection.setDoOutput(true);
-        OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8);
-        writer.write(param);
-        writer.flush();
+        try (OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8)) {
+            writer.write(param);
+            writer.flush(); // 通常flush()在close()时会自动调用，但显式调用也无妨
+        } catch (IOException e) {
+            LOGGER.error(e.getMessage());
+        }
         connection.connect();
         return connection;
     }
@@ -557,16 +569,14 @@ public class Parse {
     }
 
     private static String ReadInput(InputStream is) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
         StringBuffer sbf = new StringBuffer();
-        String temp = null;
-        while ((temp = br.readLine()) != null) {
-            sbf.append(temp);
-        }
-        try {
-            br.close();
-        } catch (IOException e) {
-            System.out.println("read input failed, error is: " + e.getMessage());
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            String temp = null;
+            while ((temp = br.readLine()) != null) {
+                sbf.append(temp);
+            }
+        }  catch (IOException e) {
+            LOGGER.error("read input failed, error is: {}", e.getMessage());
         }
         try {
             is.close();
@@ -574,7 +584,5 @@ public class Parse {
             System.out.println("close stream failed, error is: " + e.getMessage());
         }
         return sbf.toString();
-
     }
-
 }
