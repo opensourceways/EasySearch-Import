@@ -1123,11 +1123,23 @@ public final class Parse {
                 if ("date".equals(map.get(keyString))) {
                     valueString = valueString.replaceAll("/", "-");
                     String[] parts = valueString.split("-");
-                    if (parts.length - 1 == 1) {
-                        valueString += "-01";
+                    String newString = "";
+                    for (int i = 0; i < parts.length; i++) {
+                        if (parts[i].length() == 1) {
+                            parts[i] = "0" + parts[i];
+                        }
+                        newString += (i == 0 ? "" : "-") + parts[i];
                     }
+                    if (parts.length - 1 == 1) {
+                        newString += "-01";
+                    }
+                    if ("".equals(newString)) {
+                        newString = "2020-01-01";
+                    }
+                    resMap.put(map.get(keyString), newString);
+                } else {
+                    resMap.put(map.get(keyString), valueString);
                 }
-                resMap.put(map.get(keyString), valueString);
             }
         }
         if (resMap.size() > 0) {
