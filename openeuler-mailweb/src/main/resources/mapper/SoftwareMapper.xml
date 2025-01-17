@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.openeuler.collect.mapper.SoftwareMapper">
+
+    <select id="getOpeneulerMailWebData" resultType="com.openeuler.collect.dto.MailWebDto">
+        <!--SELECT
+        m.title,
+        concat(content,chilContent) as "textContent",
+        'zh' AS lang,
+        'mail'AS type,
+
+        concat('https://mailweb.openeuler.org/hyperkitty/list/', hyperkitty_mailinglist.name, '/thread/',message_id_hash) as path,
+        hyperkitty_mailinglist.archive_policy as "archivePolicy"
+
+        FROM ( SELECT mail.message_id_hash, mail.subject  as title ,mail.content,mail.mailinglist_id , chilmail.chilContent FROM( SELECT * FROM "hyperkitty_email" WHERE parent_id is null  LIMIT #{LIMIT} OFFSET #{OFFSET}
+
+        ) as mail
+        LEFT JOIN
+        (SELECT   in_reply_to,string_agg(content, '') as chilcontent from hyperkitty_email WHERE in_reply_to  in  (SELECT message_id FROM "hyperkitty_email" WHERE parent_id is null  LIMIT #{LIMIT} OFFSET #{OFFSET}) GROUP BY in_reply_to) as chilmail
+        on
+        mail.message_id=chilmail.in_reply_to
+
+
+        ) as m
+        LEFT JOIN hyperkitty_mailinglist ON m.mailinglist_id =hyperkitty_mailinglist.id-->
+
+        SELECT
+        mail.subject as title,
+        TO_CHAR(date, 'yyyy-MM-dd') as date,
+        'zh' AS lang,
+        'mail'AS type,
+        concat(content,chilContent) as "textContent",
+        concat('https://mailweb.openeuler.org/hyperkitty/list/', name, '/thread/',message_id_hash) as path,
+        archive_policy as "archivePolicy"
+        FROM( SELECT * FROM "hyperkitty_email" WHERE parent_id is null and subject not like '%mail test%' and subject
+        not like '%test mail%' and subject not like '%测试邮件%' and subject not like '%邮件测试%' and subject not like
+        '%[Test]%' ) as mail
+        LEFT JOIN hyperkitty_mailinglist ON mail.mailinglist_id =hyperkitty_mailinglist.id
+        LEFT JOIN
+        (SELECT in_reply_to,string_agg(content, '') as chilcontent from hyperkitty_email GROUP BY in_reply_to) as
+        chilmail
+        on
+        mail.message_id=chilmail.in_reply_to
+
+        WHERE archive_policy!=1
+
+        LIMIT #{LIMIT} OFFSET #{OFFSET}
+
+
+    </select>
+
+
+</mapper>

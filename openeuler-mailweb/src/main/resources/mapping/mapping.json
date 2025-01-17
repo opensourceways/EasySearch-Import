@@ -1,0 +1,107 @@
+{
+  "properties": {
+    "_class": {
+      "type": "keyword",
+      "index": false,
+      "doc_values": false
+    },
+    "id": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "category": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "description": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "providesText": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "originPkg": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "name": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "requiresText": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "installation": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "summary": {
+      "type": "text",
+      "analyzer": "ik_max_word",
+      "search_analyzer": "ik_smart"
+    },
+    "dataType": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "version": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "date": {
+      "type": "date"
+    },
+    "size": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    },
+    "updatetime": {
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    }
+  }
+}
